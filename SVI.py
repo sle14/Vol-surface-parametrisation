@@ -3,14 +3,15 @@ import matplotlib.pyplot as plt
 from scipy.stats import norm
 from numpy import log,sqrt,exp,inf,pi
 import pandas as pd
-import scipy as sp
 import numpy as np
 import sqlalchemy
-import math
+import time
 cdf,pdf = norm.cdf,norm.pdf
 pd.options.mode.chained_assignment = None
 np.seterr(divide='ignore')
 np.warnings.filterwarnings('ignore')
+
+def sign(i): return -1 if i < 0 else 1
 
 def get_vega(X,T,S,d1,r,q):
     T = T/365
@@ -42,7 +43,21 @@ def get_value(R,S,X,T,r,q,s):
         return (S*exp(-q*T)*cdf(d1))-(X*exp(-r*T)*cdf(d2))
     else:
         return (X*exp(-r*T)*cdf(-d2))-(S*exp(-q*T)*cdf(-d1))
-    
+
+def get_implied_div(df,ex_itm_puts=False,plot=False):
+    dfx = df[df["Moneyness"]>1] if ex_itm_puts==True else df
+    S,r = df["Spot"].iloc[0],df["Rate"].iloc[0]
+    def q(K,S,CP,T,r): return -1/(T/365)*log((CP+K*exp(-r*(T/365)))/S)   
+    dfx = dfx[["Date","Tenor","Strike","Type","Mid"]].set_index(["Date","Tenor","Strike","Type"]).unstack(3)
+    dfx[("PutCallSpread","PutCallSpread")] = dfx[("Mid","Call")] - dfx[("Mid","Put")]
+    dfx = dfx[[("PutCallSpread","PutCallSpread")]].stack(1).reset_index().dropna(); del dfx["Type"]
+    dfx["ImpliedDiv"] = np.vectorize(q)(dfx["Strike"],S,dfx["PutCallSpread"],dfx["Tenor"],r)
+    if plot==True:
+        for t in sorted(dfx["Tenor"].unique()):
+            plt.plot(dfx[dfx["Tenor"]==t]["Strike"],dfx[dfx["Tenor"]==t]["ImpliedDiv"],label=str(t))
+        plt.legend(),plt.show()
+    return df.set_index("Tenor").join(dfx.groupby(["Tenor"]).mean()[["ImpliedDiv"]]).reset_index()
+   
 def bisect(R,P,S,X,T,r,q):
     precision,max_iterations = 1e-3,500
     upper_vol,lower_vol = 1000,0.01
@@ -71,213 +86,195 @@ def bisect(R,P,S,X,T,r,q):
             return mid_vol
     else:
         return np.nan
-
-def get_forward(T,S,r,q): return S*exp((-r-q)*(T/365))
     
-def get_logstrike(X,F): return log(X/F)
+def get_strike_vector(minK,dK,maxK): return np.array([i*dK for i in range(int(minK/dK),int(maxK/dK)+3)])
 
+def get_logstrike(K,T,S,r,q): return log(K/(S*exp((-r-q)*(T/365))))
+
+def get_logstrike_vector(mink,dk,maxk): return np.array([i*dk for i in range(int(mink/dk),int(maxk/dk)+1)])
+
+#Gatheral density: taking first and second derivative of variance to logstrike
+def rnd(k,a,b,rho,m,sigma):
+    w0 = raw(k,a,b,rho,m,sigma)
+    w1 = b*(rho+((k-m)/sqrt((k-m)**2+sigma**2)))
+    w2 = (b*sigma**2)/((k-m)**2+sigma**2)**(3/2)
+    g = ((1-((k*w1)/(2*w0)))**2)-((w1**2)/4)*((1/w0)+0.25)+(w2/2)
+    p = (g/(w0*sqrt(2*pi))*exp(-(k/sqrt(w0)+sqrt(w0)/2)**2))
+    return p
+
+#Breeden&Litzenberger density: taking second derivative of call price to strike
+def rnd2(K,T,S,r,q,a,b,rho,m,sigma):
+    dK = (K[1]-K[0])
+    k = get_logstrike(K,T,S,r,q)
+    C = get_value("Call",S,K,T,r,q,sqrt(raw(k,a,b,rho,m,sigma)))
+    Q = [exp(r*(T/365))*(c2-(2*c1)+c0)/dK for c2,c1,c0 in zip(C[2:],C[1:-1],C[:-2])]
+    return Q
+
+def draw_graphs(df,params,S,T,r):
+    q = df["ImpliedDiv"].iloc[0]
+    df["ImpliedVarSvi"] = raw(df["LogStrike"].to_numpy(),*params)
+    df["ImpliedVolSvi"] = sqrt(df["ImpliedVarSvi"])
+    df["MidSvi"] = np.vectorize(get_value)(df["Type"],S,df["Strike"],T,r,0,df["ImpliedVolSvi"])
+    df["MidSviDiv"] = np.vectorize(get_value)(df["Type"],S,df["Strike"],T,r,q,df["ImpliedVolSvi"])
+    df["MidSpread"] = df["Spread"]/2
+    df["MidError"] = abs(df["Mid"]-df["MidSvi"])
+    df["MidErrorDiv"] = abs(df["Mid"]-df["MidSviDiv"])
+    
+    K = get_strike_vector(20,0.01,50)
+    k = get_logstrike(K,T,S,r,q)
+    w = raw(k,*params)
+
+    plt.title("Risk-neutral density: slice "+str(int(T)))
+    plt.plot(k,rnd(k,*params),c="r",label="Density",linewidth=1)
+    plt.legend(); plt.show()
+    
+    plt.title("Implied variance: slice "+str(int(T)))
+    plt.scatter(df["LogStrike"],df["ImpliedVar"],s=2,c="k",label="BSM")
+    plt.plot(k,w,c="r",label="SVI",linewidth=1)
+    plt.legend(); plt.show()
+    
+    plt.title("Put errors: slice "+str(int(T))); df_put = df[df["Type"]=="Put"]
+    plt.plot(df_put["Strike"],df_put["MidErrorDiv"].astype(float),c='r',linewidth=1)
+    plt.plot(df_put["Strike"],df_put["MidError"].astype(float),c='y',linewidth=1)
+    plt.plot(df_put["Strike"],df_put["MidSpread"].astype(float),c='k',linewidth=1)
+    plt.legend(); plt.show()  
+
+    plt.title("Call errors: slice "+str(int(T))); df_call = df[df["Type"]=="Call"]
+    plt.plot(df_call["Strike"],df_call["MidErrorDiv"].astype(float),c='r',linewidth=1)
+    plt.plot(df_call["Strike"],df_call["MidError"].astype(float),c='y',linewidth=1)
+    plt.plot(df_call["Strike"],df_call["MidSpread"].astype(float),c='k',linewidth=1)
+    plt.legend(); plt.show()   
+
+def raw(x,a,b,rho,m,sigma): return a+b*(rho*(x-m)+sqrt((x-m)**2+sigma**2))
+
+#Imposing constraints (0<x<4 and 1<x) so that RND's P(x)>0 making smile free of fly arb  
+def left_wing_first_coefficient_lhs(x): return ((x[1]**2)*(x[2]+1)**2)-0
+def left_wing_first_coefficient_rhs(x): return ((x[1]**2)*(x[2]+1)**2)+4
+def right_wing_first_coefficient_lhs(x): return ((x[1]**2)*(x[2]-1)**2)-0
+def right_wing_first_coefficient_rhs(x): return ((x[1]**2)*(x[2]-1)**2)+4
+def left_wing_discriminant(x): return (x[0]-x[3]*x[1]*(x[2]-1))*(4-x[0]+x[3]*x[1]*(x[2]-1))-(x[1]**2*(x[2]-1)**2)-0
+def right_wing_discriminant(x): return (x[0]-x[3]*x[1]*(x[2]+1))*(4-x[0]+x[3]*x[1]*(x[2]+1))-(x[1]**2*(x[2]+1)**2)-0
+def slope_rhs(x,T): return (x[1])+(4/((T/365)*(1+abs(x[2]))))
+def slope_lhs(x): return (x[1])-0
+
+def raw2wings(a,b,rho,m,sigma,t):
+    t = t/365
+    theta = (a+b*(-rho*m+sqrt((m**2)+(sigma**2))))
+    psi = 1/sqrt(theta)*b/2*(-m/sqrt(m**2+sigma**2)+rho)
+    p = 1/sqrt(theta)*b*(1-rho)
+    c = 1/sqrt(theta)*b*(1+rho)
+    u = 1/t*(a+b*sigma*sqrt(1-rho**2))
+    return theta,psi,p,c,u
+
+def wings2raw(theta,psi,p,c,u,t):
+    t = t/365
+    b = sqrt(theta)/2*(c+p)
+    rho = 1-p*sqrt(theta)/b
+    beta = rho-2*psi*sqrt(theta)/b
+    alpha = sign(beta)*sqrt(1/beta**2-1)
+    m = t*((theta/t)-u)/(b*(-rho+sign(alpha)*sqrt(1+alpha**2)-alpha*sqrt(1-rho**2)))
+    sigma = alpha*m if m != 0 else ((u*t-theta)/b)/sqrt(1-rho**2)
+    sigma = 0 if sigma < 0 else sigma
+    a = u*t-b*sigma*sqrt(1-rho**2)
+    return a,b,rho,m,sigma
+    
 class SVI(object):
     def __init__(self,df):
         self.chi = pd.DataFrame(columns=["t","q","epsilon","a","b","rho","m","sigma"]) 
-        self.df0 = pd.DataFrame(columns=df.columns)
-        self.df1 = pd.DataFrame(columns=df.columns)
-        self.arbfree = []
-        self.arbfit = []
-        self.errors = []
-        self.t0,self.t1 = int,int
-        self.df = df #Whole grid
-        self.q = [0]
+        self.slices = sorted(set(df["Tenor"].unique()))
+        self.S = df["Spot"].iloc[0]
+        self.r = df["Rate"].iloc[0]
+        self.df = df
 
-    def risk_neutral_density(self,x,a,b,rho,m,sigma):
-        w0 = self.raw(x,a,b,rho,m,sigma)
-        w1 = b*(rho+(x-m)/sqrt((x-m)**2+sigma**2))
-        w2 = b*((sqrt((x-m)**2+sigma**2)-(x-m)**2/sqrt((x-m)**2+sigma**2))/((x-m)**2+sigma**2))
-        g = (1-x*w1/(2*w0))**2-w1**2/4*(1/w0+1/4)+w2/2
-        d = -x/sqrt(w0)-sqrt(w0)/2
-        return g/sqrt(2*pi*w0)*exp((-d**2)/2)
-
-    def raw(self,x,a,b,rho,m,sigma): 
-        return a+b*(rho*(x-m)+sqrt((x-m)**2+sigma**2))
-
-    def raw2wing(self,a,b,rho,m,sigma,t):
-        t = t/365
-        v = (a+b*(-rho*m+sqrt((m**2)+(sigma**2))))/t
-        w = v*t
-        psi = 1/sqrt(w)*b/2*(-m/sqrt(m**2+sigma**2)+rho)
-        p = 1/sqrt(w)*b*(1-rho)
-        c = 1/sqrt(w)*b*(1+rho)
-        u = 1/t*(a+b+sigma*sqrt(1-rho**2))
-        return pd.DataFrame({"v":v,"w":w,"psi":psi,"p":p,"c":c,"u":u})
-
-    def div_residual(self,q,x,y):
-        df = self.df0
-        bid = df["Bid"].to_numpy()
-        ask = df["Ask"].to_numpy()
-        mid = np.vectorize(get_value)(df["Type"],df["Spot"],x,df["Tenor"],df["Rate"],q,df["ImpliedVolSvi"])
-        mid_bid = ((mid-bid)/((mid-bid)+(ask-mid)))**2
-        ask_mid = ((ask-mid)/((mid-bid)+(ask-mid)))**2
-        epsilon = sum(((mid_bid+ask_mid)/.5)-1)*100
-        return epsilon 
-
-    def var_residual(self,params,x,y):
-        df = self.df0
-        vega = df["Vega"]
-        weights = [i/max(vega) for i in vega]
-        #Quadratically weighted penalty for prices derived from the fit being outside the spread
-        bid = df["Bid"].to_numpy()
-        ask = df["Ask"].to_numpy()
-        var = self.raw(x,*params)
-        vol = sqrt(var)
-        mid = np.vectorize(get_value)(df["Type"],df["Spot"],df["Strike"],df["Tenor"],df["Rate"],self.q,vol)
-        mid_bid = ((mid-bid)/((mid-bid)+(ask-mid)))**2
-        ask_mid = ((ask-mid)/((mid-bid)+(ask-mid)))**2
-        outspread = sum(((mid_bid+ask_mid)/.5)-1)  
-        butterfly = abs(weights*(y-var)).sum()
-        if self.t1 != 365: #Arbitrary number for expiry outside our final slice
-            var_next = self.df1["ImpliedVar"].to_numpy()
-            calendar = sum([np.maximum(0,x1-x0) for x0,x1 in zip(var,var_next)])*10000 #Heavy penalty on calendars
-            epsilon = (butterfly+outspread+calendar)/3 #Mean residual
+    def residual(self,params,df,i,K):
+        params = params.tolist()
+        t,q = df["Tenor"].iloc[0],df["ImpliedDiv"].iloc[0]
+        bid,ask,var = df["Bid"].to_numpy(),df["Ask"].to_numpy(),raw(df["LogStrike"].to_numpy(),*params)
+        mid_svi = np.vectorize(get_value)(df["Type"],self.S,df["Strike"],self.slices[i],self.r,df["ImpliedDiv"],sqrt(var))
+        mid_bid = ((mid_svi-bid)/((mid_svi-bid)+(ask-mid_svi)))**2
+        ask_mid = ((ask-mid_svi)/((mid_svi-bid)+(ask-mid_svi)))**2
+        spread = (((mid_bid+ask_mid)/.5)-1)
+        weights = [1-((i-self.S)/self.S)**2 for i in df["Strike"]]
+        epsilon = sum([s for s,w in zip(spread,weights)])
+        self.chi.loc[len(self.chi)] = [t,q,epsilon]+params
+        self.chi = self.chi[self.chi["epsilon"]==self.chi.groupby("t")["epsilon"].transform("min")]
+        self.chi = self.chi.drop_duplicates(subset=["t"]).reset_index(drop=True).sort_values(by=["t"])
+        if np.isnan(epsilon) == True:
+            return 1e4
         else:
-            epsilon = (butterfly+outspread)/3
-        self.chi.loc[len(self.chi)] = [self.t0,self.q[0],epsilon]+params.tolist()
-        self.errors.append(epsilon)
-        return epsilon 
+            return epsilon
     
-    def optimise(self):
-        epsilon,tolerance = inf,2
-        tenors0 = sorted(set(self.df["Tenor"].unique()))
-        tenors1 = sorted(set(np.append(self.df["Tenor"].unique()[1:],365)))
-        for t0,t1 in zip(tenors0,tenors1):
-            self.t0 = t0
-            self.t1 = t1
-            while epsilon > tolerance:
-                self.var_fit()
-                epsilon = self.arbfree[2]
-                print(f"q {self.q[0]:.3f} | t0 slice {t0} | t1 slice {t1} | ε {epsilon:.3f}")
-                if epsilon > tolerance: self.div_fit() #If error is too big we are missig q
-            epsilon = inf
-            self.graph()
-            self.errors = []
-        self.chi = self.chi[self.chi["epsilon"]==self.chi.groupby("t")["epsilon"].transform("min")]   
-        return self.chi.join(self.raw2wing(self.chi["a"],self.chi["b"],self.chi["rho"],self.chi["m"],self.chi["sigma"],self.chi["t"]))
-    
-    def div_fit(self):
-        x0 = self.df0["Strike"].to_numpy()
-        y0 = self.df0["Mid"].to_numpy()
-        self.q = minimize(self.div_residual,(self.q),method="SLSQP",args=(x0,y0),options={"maxiter":100}).x
-        return self
-    
-    def prepare_grid(self,t,q):
+    def work_frame(self,i):
+        t = self.slices[i]
         df = self.df[self.df["Tenor"]==t]
-        df["ImpliedVol"] = np.vectorize(bisect)(df["Type"],df["Mid"],df["Spot"],df["Strike"],df["Tenor"],df["Rate"],q)
-        df["ImpliedVar"] = df["ImpliedVol"]**2
-        df["Forward"] = np.vectorize(get_forward)(df["Tenor"],df["Spot"],df["Rate"],q)
-        df["LogStrike"] = np.vectorize(get_logstrike)(df["Strike"],df["Forward"])
-        df["d1"],df["d2"] = np.vectorize(get_ds)(df["Strike"],df["Tenor"],df["Spot"],df["Rate"],q,df["ImpliedVol"])
-        df["Vega"] = np.vectorize(get_vega)(df["Strike"],df["Tenor"],df["Spot"],df["d1"],df["Rate"],q)
+        df["ImpliedVol"] = np.vectorize(bisect)(df["Type"],df["Mid"],df["Spot"],df["Strike"],df["Tenor"],df["Rate"],df["ImpliedDiv"])
+        df["ImpliedVar"] = (df["ImpliedVol"]**2)
+        df["LogStrike"] = np.vectorize(get_logstrike)(df["Strike"],df["Tenor"],df["Spot"],df["Rate"],df["ImpliedDiv"])
         df = df.dropna().sort_values(by=["LogStrike"])
+        return df
+
+    def get_params(self,i):
+        t = self.slices[i]
+        chi = list(self.chi[self.chi["t"]==t].iloc[0])
+        epsilon,params = chi[2],chi[3:]
+        return epsilon,params
+
+    def optimise(self,i,epsilon,tolerance,K,graphs:bool):
+        t = self.slices[i]          
+        while epsilon > tolerance:
+            df = self.work_frame(i)
+            self.px_fit(df,i,K)
+            epsilon,params = self.get_params(i)
+        if graphs==True: draw_graphs(df,params,self.S,t,self.r) 
+
+    def run(self):
+        epsilon,tolerance = inf,10
+        K = get_strike_vector(20,1,60)
+        for i in range(len(self.slices)):
+            self.optimise(i,epsilon,tolerance,K,True)
+        chi = self.chi
+        jw = raw2wings(chi["a"],chi["b"],chi["rho"],chi["m"],chi["sigma"],chi["t"])
+        return chi.join(pd.DataFrame({"w":jw[0],"psi":jw[1],"p":jw[2],"c":jw[3],"u":jw[4],"r":self.r,"S":self.S}))
+
+    def px_fit(self,df,i,K):
+        k = df["LogStrike"].to_numpy()
+        w = df["ImpliedVar"].to_numpy()
+        _a,_b,_rho,_m,_sigma = 0,0,-1,2*min(k),0.01
+        a_,b_,rho_,m_,sigma_ = max(w),10,1,2*max(k),10
+        args = (df,i,K)
+        bounds = ((_a,a_),(_b,b_),(_rho,rho_),(_m,m_),(_sigma,sigma_))
+        constraints = ({"type":"ineq","fun":left_wing_first_coefficient_lhs},
+                       {"type":"ineq","fun":left_wing_first_coefficient_rhs},
+                       {"type":"ineq","fun":right_wing_first_coefficient_lhs},
+                       {"type":"ineq","fun":right_wing_first_coefficient_rhs},
+                       {"type":"ineq","fun":left_wing_discriminant},
+                       {"type":"ineq","fun":right_wing_discriminant},
+                       {"type":"ineq","fun":slope_rhs,"args":[self.slices[i],]},
+                       {"type":"ineq","fun":slope_lhs})
+        lower_bound = _a,_b,_rho,_m,_sigma
+        upper_bound = a_,b_,rho_,m_,sigma_
+        guess = curve_fit(raw,k,w,bounds=[lower_bound,upper_bound])[0]
+        minimize(self.residual,guess,method="SLSQP",args=args,options={"maxiter":1000},bounds=bounds,constraints=constraints)
+        print(f"t {self.slices[i]:={3}} ε {self.get_params(i)[0]:.3f}")
         
-        xdata = df["LogStrike"].to_numpy()
-        ydata = df["ImpliedVar"].to_numpy()
-        a_ = (0,max(ydata)) #vertical translation
-        b_ = (0,10) #wings slope
-        rho_ = (-1,1) #counter-clockwise rotation
-        m_ = (2*min(xdata),2*max(xdata)) #horizontal translation
-        sigma_ = (0.01,10) #smile curvature
-
-        #Get fit for smile as first guess of params 
-        lower_bound = (a_[0],b_[0],rho_[0],m_[0],sigma_[0])
-        upper_bound = (a_[1],b_[1],rho_[1],m_[1],sigma_[1])
-        self.arbfit,pcov = curve_fit(self.raw,xdata,ydata,bounds=[lower_bound,upper_bound])
-        return xdata,ydata,(a_,b_,rho_,m_,sigma_),df
-    
-    def var_fit(self):
-        if self.t1 != 365: x1,y1,bounds1,self.df1 = self.prepare_grid(self.t1,0)
-        x0,y0,bounds0,self.df0 = self.prepare_grid(self.t0,self.q)
-        #Imposing constraints (0<x<4 and 1<x) so that RND's P(x)>0 making smile free of fly arb
-        def left_wing_first_coefficient_lhs(x): return ((x[1]**2)*(x[2]+1)**2)-0
-        def left_wing_first_coefficient_rhs(x): return ((x[1]**2)*(x[2]+1)**2)+4
-        def right_wing_first_coefficient_lhs(x): return ((x[1]**2)*(x[2]-1)**2)-0
-        def right_wing_first_coefficient_rhs(x): return ((x[1]**2)*(x[2]-1)**2)+4
-        def left_wing_discriminant(x): return (x[0]-x[3]*x[1]*(x[2]-1))*(4-x[0]+x[3]*x[1]*(x[2]-1))-(x[1]**2*(x[2]-1)**2)-0
-        def right_wing_discriminant(x): return (x[0]-x[3]*x[1]*(x[2]+1))*(4-x[0]+x[3]*x[1]*(x[2]+1))-(x[1]**2*(x[2]+1)**2)-0
-
-        #Minimise implied variance error between fit and arbfree smile
-        guess = (0.5*min(y0),0.1,-0.5,0.1,0.1)
-        minimize(self.var_residual,guess,method="SLSQP",args=(x0,y0),options={"maxiter":1000},
-                 bounds=bounds0,
-                 constraints=({"type":"ineq","fun":left_wing_first_coefficient_lhs},
-                              {"type":"ineq","fun":left_wing_first_coefficient_rhs},
-                              {"type":"ineq","fun":right_wing_first_coefficient_lhs},
-                              {"type":"ineq","fun":right_wing_first_coefficient_rhs},
-                              {"type":"ineq","fun":left_wing_discriminant},
-                              {"type":"ineq","fun":right_wing_discriminant}))
-        
-        self.arbfree = self.chi[self.chi["t"]==self.t0]
-        self.arbfree = self.arbfree[self.arbfree["epsilon"]==min(self.arbfree["epsilon"])].values.tolist()[0]
-        
-        #New variance,volatility and mid prices
-        self.df0["ImpliedVarSvi"] = self.raw(x0,*self.arbfree[3:])
-        self.df0["ImpliedVolSvi"] = sqrt(self.df0["ImpliedVarSvi"])
-        self.df0["MidSvi"] = np.vectorize(get_value)(self.df0["Type"],self.df0["Spot"],self.df0["Strike"],self.df0["Tenor"],self.df0["Rate"],0,self.df0["ImpliedVolSvi"])
-        self.df0["MidSviQ"] = np.vectorize(get_value)(self.df0["Type"],self.df0["Spot"],self.df0["Strike"],self.df0["Tenor"],self.df0["Rate"],self.q,self.df0["ImpliedVolSvi"])
-        return self
-
-    def graph(self):
-        df = self.df0
-        t = str(self.t0)
-        logstrike = df["LogStrike"].to_numpy()
-        impliedvar = df["ImpliedVar"].to_numpy()
-        #Graph errors
-        plt.scatter(range(len(self.errors)),self.errors,s=1,label="Epsilon "+t)
-        plt.yscale("log")
-        plt.legend()
-        plt.show()
-        #Graph risk neutral density of best fit and arb free smile
-        plt.plot(logstrike,self.risk_neutral_density(logstrike,*self.arbfree[3:]),'g',label="Arb-free "+t)
-        plt.plot(logstrike,self.risk_neutral_density(logstrike,*self.arbfit),'r',label="Best-fit "+t)
-        plt.legend()
-        plt.show()
-        #Graph implied variance for raw values, best fit and arb free smile
-        plt.plot(logstrike,impliedvar,label="Raw "+t)
-        plt.plot(logstrike,self.raw(logstrike,*self.arbfree[3:]),'g',label="Arb-free "+t)
-        plt.plot(logstrike,self.raw(logstrike,*self.arbfit),'r',label="Best-fit "+t)
-        plt.legend()
-        plt.show()
-        df = df[(df["Moneyness"]>=0.9)&(df["Moneyness"]<=1.1)]
-        #Plot Prices - Call
-        plt.plot(df[df["Type"]=="Call"]["Moneyness"],df[df["Type"]=="Call"]["Bid"].astype(float),'r',label="Call Bid "+t)
-        plt.plot(df[df["Type"]=="Call"]["Moneyness"],df[df["Type"]=="Call"]["Ask"].astype(float),'g',label="Call Ask "+t)
-        plt.plot(df[df["Type"]=="Call"]["Moneyness"],df[df["Type"]=="Call"]["MidSvi"],'y',label="Call Svi "+t)
-        plt.plot(df[df["Type"]=="Call"]["Moneyness"],df[df["Type"]=="Call"]["MidSviQ"],'b',label="Call SviQ "+t)
-        plt.legend()
-        plt.show()   
-        #Plot Prices - Put
-        plt.plot(df[df["Type"]=="Put"]["Moneyness"],df[df["Type"]=="Put"]["Bid"].astype(float),'r',label="Put Bid "+t)
-        plt.plot(df[df["Type"]=="Put"]["Moneyness"],df[df["Type"]=="Put"]["Ask"].astype(float),'g',label="Put Ask "+t)
-        plt.plot(df[df["Type"]=="Put"]["Moneyness"],df[df["Type"]=="Put"]["MidSvi"],'y',label="Put Svi "+t)
-        plt.plot(df[df["Type"]=="Put"]["Moneyness"],df[df["Type"]=="Put"]["MidSviQ"],'b',label="Put SviQ "+t)    
-        plt.legend()
-        plt.show() 
-
 def trim_grid(df):
     df = get_tenor(df,["Date","Expiry"])
-    df["Bid"] = df["Bid"].astype(float)
-    df["Ask"] = df["Ask"].astype(float)
-    df["Spread"] = df["Spread"].astype(float)
+    cols = ["Strike","Bid","Ask","Spread","Mid"]
+    df[cols] = df[cols].astype(float)
     df["Moneyness"] = df["Strike"]/df["Spot"]
-    df = df[(df["Mid"]!=0)&(df["Tenor"]!=0)&(df["Bid"]>0)&(df["Ask"]>0)&(df["Moneyness"]>.7)&(df["Moneyness"]<1.2)]
+    df = df[(df["Tenor"]!=0)&(df["Bid"]>0.1)&(df["Ask"]>0.1)]
     return df
 
-#and dbo.options.Expiry = '18/09/2020'
 query = """
-select dbo.options.*, dbo.equities.Mid as 'Spot', dbo.rates.Rate
-from dbo.options 
-join dbo.equities on dbo.options.Date = dbo.equities.Date and dbo.options.Date = '15/04/2020'
+select dbo.options.*, dbo.equities.Mid as 'Spot', dbo.rates.Rate from dbo.options
+join dbo.equities on dbo.options.Date = dbo.equities.Date and dbo.options.Time = dbo.equities.Time 
+and dbo.options.Date = '27/05/2020' and dbo.options.Time = '15:20' and dbo.options.Lotsize = 100
 join dbo.rates on dbo.options.Date = dbo.rates.Date"""
-df = trim_grid(get_frame("Historical",query))
+df = get_frame("Historical",query)
+df = trim_grid(df)
+df = get_implied_div(df,True,True)
 #--------------SVI----------------------------------------------------------------------------
-chi = SVI(df).optimise()
-
-
-
+start = time.time()
+chi = SVI(df).run()
+end = time.time()
+print(f"Runtime: {end-start}")
