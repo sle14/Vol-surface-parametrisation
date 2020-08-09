@@ -168,8 +168,3 @@ P = [i*0.1 for i in P][1:-1]
 plt.plot(returns,P,c="g") #Realised density - P measure
 plt.plot(returns,Q,c="r") #Implied density - Q measure
 plt.show()
-
-#Convolve P & Q measures to get implied pricing kernel
-filtered = signal.convolve(P,Q,mode="same",method="fft")/sum(Q)
-plt.plot(returns,filtered)
-plt.show()
