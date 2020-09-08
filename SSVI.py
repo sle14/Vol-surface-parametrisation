@@ -1,314 +1,192 @@
+from scipy.interpolate import InterpolatedUnivariateSpline as spline
 from scipy.optimize import minimize
-import matplotlib.pyplot as plt
-from numpy import log,sqrt,exp,inf,pi
-from scipy.interpolate import interp1d
 from scipy.stats import norm
-import pandas as pd
+from numpy import log,sqrt,exp,inf,pi
+from numpy import vectorize as vct
 import numpy as np
-import sqlalchemy
-cdf,pdf = norm.cdf,norm.pdf
-pd.options.mode.chained_assignment = None
+import matplotlib.pyplot as plt
+import pandas as pd
+import time
+import query #custom query module
+N,n = norm.cdf,norm.pdf
+start_time = time.time()
 np.seterr(divide='ignore')
 np.warnings.filterwarnings('ignore')
 
-def graphs(df,params):
-    for t in sorted(df["Tenor"].unique()):
-        k = df[df["Tenor"]==t]["LogStrike"]
-        v = df[df["Tenor"]==t]["AtmVar"]
-        w = df[df["Tenor"]==t]["ImpliedVar"]*(t/365)
-        plt.plot(k,surface(k,v,*params),label=t)
-        plt.scatter(k,w,s=2,label=t)
-    plt.legend(); plt.show()
-    K = get_strike_vector(10,0.1,60)
-    for t in sorted(df["Tenor"].unique()):
-        S = df[df["Tenor"]==t]["Spot"].iloc[0]
-        r = df[df["Tenor"]==t]["Rate"].iloc[0]
-        q = df[df["Tenor"]==t]["ImpliedDiv"].iloc[0]
-        v = df[df["Tenor"]==t]["AtmVar"].iloc[0]
-        k = get_logstrike(K,t,S,r,q)
-        w = surface(k,v,*params)/(t/365)
-        Q = rnd(K,t,S,r,q,w)
-        plt.plot(k[1:-1],Q,label=t)
-    plt.legend(); plt.show()  
-    dfx = df[df["Type"]=="Call"]
-    for t in sorted(dfx["Tenor"].unique()):
-        v = dfx[dfx["Tenor"]==t]["AtmVar"].iloc[0]
-        K = dfx[dfx["Tenor"]==t]["Strike"]
-        S = dfx[dfx["Tenor"]==t]["Spot"].iloc[0]
-        r = dfx[dfx["Tenor"]==t]["Rate"].iloc[0]
-        q = dfx[dfx["Tenor"]==t]["ImpliedDiv"].iloc[0]
-        R = dfx[dfx["Tenor"]==t]["Type"].to_numpy()
-        k = get_logstrike(K,t,S,r,q)
-        ATM = np.vectorize(get_value)("Call",S,S,t,r,q,sqrt(v/(t/365)))
-        w = surface(k,v,*params)/(t/365)
-        P = np.vectorize(get_value)(R,S,K,t,r,q,sqrt(w))
-        plt.plot(K,P,label=t)
-        payoff = [max(0,S-k) for k in K]
-        plt.plot(K,payoff,label="Payoff",c="k",linewidth=1)
-        plt.scatter(K,dfx[dfx["Tenor"]==t]["Mid"],label=t,s=2)
-        plt.scatter(S,ATM,c="k",s=4)
-    plt.legend(); plt.show()
-    dfx = df[df["Type"]=="Put"]
-    for t in sorted(dfx["Tenor"].unique()):
-        v = dfx[dfx["Tenor"]==t]["AtmVar"].iloc[0]
-        K = dfx[dfx["Tenor"]==t]["Strike"]
-        S = dfx[dfx["Tenor"]==t]["Spot"].iloc[0]
-        r = dfx[dfx["Tenor"]==t]["Rate"].iloc[0]
-        q = dfx[dfx["Tenor"]==t]["ImpliedDiv"].iloc[0]
-        R = dfx[dfx["Tenor"]==t]["Type"].to_numpy()
-        k = get_logstrike(K,t,S,r,q)
-        ATM = np.vectorize(get_value)("Put",S,S,t,r,q,sqrt(v/(t/365)))
-        w = surface(k,v,*params)/(t/365)
-        P = np.vectorize(get_value)(R,S,K,t,r,q,sqrt(w))
-        plt.plot(K,P,label=t)
-        payoff = [max(0,k-S) for k in K]
-        plt.plot(K,payoff,label="Payoff",c="k",linewidth=1)
-        plt.scatter(K,dfx[dfx["Tenor"]==t]["Mid"],label=t,s=2)
-        plt.scatter(S,ATM,c="k",s=4)
-    plt.legend(); plt.show()
-    #Errors
-    call_errors = pd.DataFrame(columns=["t","c_error"])
-    dfx = df[df["Type"]=="Call"]
-    for t in sorted(dfx["Tenor"].unique()):
-        v = dfx[dfx["Tenor"]==t]["AtmVar"].iloc[0]
-        K = dfx[dfx["Tenor"]==t]["Strike"]
-        S = dfx[dfx["Tenor"]==t]["Spot"].iloc[0]
-        r = dfx[dfx["Tenor"]==t]["Rate"].iloc[0]
-        q = dfx[dfx["Tenor"]==t]["ImpliedDiv"].iloc[0]
-        R = dfx[dfx["Tenor"]==t]["Type"].to_numpy()
-        k = get_logstrike(K,t,S,r,q)
-        ATM = np.vectorize(get_value)("Call",S,S,t,r,q,sqrt(v/(t/365)))
-        w = surface(k,v,*params)/(t/365)
-        P = np.vectorize(get_value)(R,S,K,t,r,q,sqrt(w))
-        error = abs(dfx[dfx["Tenor"]==t]["Mid"]-P)
-        spread = dfx[dfx["Tenor"]==t]["Spread"]/2
-        spread = [max(0.,e-s) for e,s in zip(error,spread)]
-        plt.plot(K,spread,label=t)
-        call_errors.loc[len(call_errors)] = [t,sum(spread)/len(spread)]
-    plt.legend(); plt.show()
-    put_errors = pd.DataFrame(columns=["t","p_error"])
-    dfx = df[df["Type"]=="Put"]
-    for t in sorted(dfx["Tenor"].unique()):
-        v = dfx[dfx["Tenor"]==t]["AtmVar"].iloc[0]
-        K = dfx[dfx["Tenor"]==t]["Strike"]
-        S = dfx[dfx["Tenor"]==t]["Spot"].iloc[0]
-        r = dfx[dfx["Tenor"]==t]["Rate"].iloc[0]
-        q = dfx[dfx["Tenor"]==t]["ImpliedDiv"].iloc[0]
-        R = dfx[dfx["Tenor"]==t]["Type"].to_numpy()
-        k = get_logstrike(K,t,S,r,q)
-        ATM = np.vectorize(get_value)("Put",S,S,t,r,q,sqrt(v/(t/365)))
-        w = surface(k,v,*params)/(t/365)
-        P = np.vectorize(get_value)(R,S,K,t,r,q,sqrt(w))
-        error = abs(dfx[dfx["Tenor"]==t]["Mid"]-P)
-        spread = dfx[dfx["Tenor"]==t]["Spread"]/2
-        spread = [max(0.,e-s) for e,s in zip(error,spread)]
-        plt.plot(K,spread,label=t)
-        put_errors.loc[len(put_errors)] = [t,sum(spread)/len(spread)]        
-    plt.legend(); plt.show()
-    return call_errors.set_index("t").join(put_errors.set_index("t"))
+class SSVI(object):
+    def __init__(self):
+        self.slice_errors = dict() #Mean error per slice
+
+    def correlation(self,theta,a,b,c):  #skew term structure
+        return a*exp(-b*theta)+c
     
-def bisect(R,P,S,X,T,r,q):
-    precision,max_iterations = 1e-3,500
-    upper_vol,lower_vol = 1000,0.01
-    error,i = 1,0
-    while error > precision and i < max_iterations:
-        i += 1
-        mid_vol = (upper_vol+lower_vol)/2
-        price = get_value(R,S,X,T,r,q,mid_vol)
-        error = abs(price-P)
-        if R == "Call":
-            lower_price = get_value(R,S,X,T,r,q,lower_vol)
-            if (lower_price - P) * (price - P) > 0:
-                lower_vol = mid_vol
-            else:
-                upper_vol = mid_vol
+    def power_law(self,theta,eta,gamma): 
+        return eta/theta**gamma*(1+theta)**(1-gamma)
+    
+    def fly_constraint1(self,params,theta):
+        a,b,c,eta,gamma = params
+        rho = self.correlation(theta,a,b,c)
+        phi = self.power_law(theta,eta,gamma)
+        return (theta*phi*(1+abs(rho)))+4
+    
+    def eta_constraint1(self,params,theta):
+        a,b,c,eta,gamma = params
+        rho = self.correlation(theta,a,b,c)
+        return eta+(4*max(theta)**(gamma-1))/(1+abs(rho))
+
+    def fly_constraint2(self,params,theta): 
+        a,b,c,eta,gamma = params
+        rho = self.correlation(theta,a,b,c)
+        phi = self.power_law(theta,eta,gamma)
+        return (theta*phi**2*(1+abs(rho)))+(4+1e-10)  
+
+    def eta_constraint3(self,params,theta):
+        a,b,c,eta,gamma = params
+        rho = self.correlation(theta,a,b,c)
+        return eta*(1-abs(rho))+(2+1e-10)
+    
+    def eta_constraint2(self,params,theta):
+        a,b,c,eta,gamma = params
+        rho = self.correlation(theta,a,b,c)
+        return eta+(2*max(theta)**(gamma-1/2))/(sqrt(1+abs(rho)))
+    
+    def rho_constraint(self,params,theta):
+        a,b,c,eta,gamma = params
+        rho = self.correlation(theta,a,b,c)
+        return abs(rho)+1
+    
+    def gamma_constraint(self,params,theta):
+        a,b,c,eta,gamma = params
+        rho = self.correlation(theta,a,b,c)
+        return gamma+((1+sqrt(1-rho**2))/rho**2)
+    
+    def abc_constraint(self,params):
+        a,b,c,eta,gamma = params
+        return abs((c-a)/(1-gamma*exp(gamma-2)))+1
+    
+    def ac_constraint(self,params):
+        a,b,c,eta,gamma = params
+        return abs(a+c)+1
+
+    def surface(self,k,theta,a,b,c,eta,gamma):
+        rho = self.correlation(theta,a,b,c)
+        phi = self.power_law(theta,eta,gamma)
+        return (theta/2)*(1+rho*phi*k+sqrt((k*phi+rho)**2+(1-rho**2)))
+    
+    def residual(self,params,k,v,T,s):
+        fit_vol,mid_vol = sqrt(self.surface(k,v,*params)/(T/365)),s
+        epsilon = [abs(mv-fv) for mv,fv in zip(mid_vol,fit_vol)]
+        self.slice_errors = dict()
+        for t in list(set(T)): #Total absolute errors in vols per slice / num of k
+            idx = list(i for i,v in enumerate(T) if v==t)
+            self.slice_errors[t] = (sum(np.array(epsilon)[idx])/len(idx))
+        return sum(epsilon)**2 if np.isnan(sum(epsilon)) == False else 1e3
+    
+    #Fit paramterised vols to quoted vols
+    def fit_vols(self,k,v,T,s):
+        guess = (-0.2,10,-0.2,0.5,0.25)
+        bounds = ((-inf,inf),(0,inf),(-1,1),(0,1),(0,0.5))
+        params = minimize(self.residual,guess,args=(k,v,T,s),method="SLSQP",options={"maxiter":5000},bounds=bounds,
+        constraints=({"type":"ineq","fun":self.eta_constraint1,"args":(v,)},
+                     {"type":"ineq","fun":self.eta_constraint2,"args":(v,)},
+                     {"type":"ineq","fun":self.eta_constraint3,"args":(v,)},
+                     {"type":"ineq","fun":self.fly_constraint1,"args":(v,)},
+                     {"type":"ineq","fun":self.fly_constraint2,"args":(v,)},
+                     {"type":"ineq","fun":self.rho_constraint,"args":(v,)},
+                     {"type":"ineq","fun":self.gamma_constraint,"args":(v,)},
+                     {"type":"ineq","fun":self.abc_constraint},
+                     {"type":"ineq","fun":self.ac_constraint}))
+        return params.x,self.slice_errors
+
+    #Taking derivatives of total variances to logstrike
+    def rnd(self,k,theta,a,b,c,eta,gamma):
+        w = (theta/2)*(1+(a*exp(-b*theta)+c)*(eta/theta**gamma*(1+theta)**(1-gamma))*k+sqrt((k*(eta/theta**gamma*(1+theta)**(1-gamma))+(a*exp(-b*theta)+c))**2+(1-(a*exp(-b*theta)+c)**2)))
+        wp = (theta/2)*((eta*(theta+1)**(1-gamma)*((eta*(theta+1)**(1-gamma)*k)/theta**gamma+a*exp(-b*theta)+c))/(theta**gamma*sqrt(((eta*(theta+1)**(1-gamma)*k)/theta**gamma+a*exp(-b*theta)+c)**2-(a*exp(-b*theta)+c)**2+1))+(eta*(theta+1)**(1-gamma)*(a*exp(-b*theta)+c))/theta**gamma)
+        wpp = -(eta**2*theta**(1-2*gamma)*(theta+1)**(2-2*gamma)*exp(-2*b*theta)*((c**2-1)*exp(2*b*theta)+2*a*c*exp(b*theta)+a**2))/(2*(((eta*(theta+1)**(1-gamma)*k)/theta**gamma+a*exp(-b*theta)+c)**2-(a*exp(-b*theta)+c)**2+1)**(3/2))
+        g = (1-0.5*(k*wp/w))**2-(0.25*wp**2)*(w**-1+0.25)+0.5*wpp
+        return (g/(sqrt(2*pi*w)))*exp(-0.5*(-k/sqrt(w)-0.5*sqrt(w))**2)
+    
+    #Get intuitive params from raw ones
+    def jumpwings(self,t,theta,a,b,c,eta,gamma):
+        phi = self.power_law(theta,eta,gamma)
+        rho = self.correlation(theta,a,b,c)
+        atmvar = theta/(t/365)
+        atmskew = 1/2*rho*sqrt(theta)*phi
+        pslope = 1/2*sqrt(theta)*phi*(1-rho)
+        cslope = 1/2*sqrt(theta)*phi*(1+rho)
+        minvar = theta/(t/365)*(1-rho**2)
+        return atmvar,atmskew,pslope,cslope,minvar
+#---------------------------------------------------------------------------------------------
+class BSM:
+    def __init__(self,R,r,q,s):
+        self.R,self.s,self.r,self.q = R,s,r,q
+
+    def d1(self,x,y,t):
+        s,r,q = self.s,self.r,self.q
+        return (log(x/y)+(r-q+(s**2)/2)*t)/(s*sqrt(t))
+    
+    def d2(self,x,y,t):
+        s,r,q = self.s,self.r,self.q
+        return (log(x/y)+(r-q-(s**2)/2)*t)/(s*sqrt(t))
+
+    def v(self,x,y,t):
+        r,q,d1,d2 = self.r,self.q,self.d1,self.d2
+        if self.R == "C":
+            return (x*exp(-q*t)*N(d1(x,y,t)))-(y*exp(-r*t)*N(d2(x,y,t)))
         else:
-            upper_price = get_value(R,S,X,T,r,q,upper_vol)
-            if (upper_price - P) * (price - P) > 0:
-                upper_vol = mid_vol
-            else:
-                lower_vol = mid_vol
-    if mid_vol < 500: 
-        if mid_vol < 0.02:
-            return np.nan
-        else:
-            return mid_vol
-    else:
-        return np.nan
+            return (y*exp(-r*t)*N(-d2(x,y,t)))-(x*exp(-q*t)*N(-d1(x,y,t)))    
+#---------------------------------------------------------------------------------------------   
+def forward(T,S,r,q,Td,D):
+    T,Td = T/365,Td/365
+    return (S-D*exp(-r*Td))*exp((r-q)*T)
 
-def get_value(R,S,X,T,r,q,s): 
-    T = T/365
-    d1 = (log(S/X)+(r-q+(s**2)/2)*T)/(s*sqrt(T))
-    d2 = d1-(s*sqrt(T))
-    if R == "Call":
-        return (S*exp(-q*T)*cdf(d1))-(X*exp(-r*T)*cdf(d2))
-    else:
-        return (X*exp(-r*T)*cdf(-d2))-(S*exp(-q*T)*cdf(-d1))
-        
-def get_frame(database,query):
-    server="LAPTOP-206OR7PL\\SQLEXPRESS"
-    engine = sqlalchemy.create_engine('mssql+pyodbc://@'+server+'/'+
-    database+'?trusted_connection=yes&driver=ODBC+Driver+13+for+SQL+Server')
-    return pd.read_sql(query,con=engine)
+def tot_atm_var(df,k_col,vol_col,new_col):
+    atm_vars = pd.DataFrame(columns=["Tenor",new_col])
+    for t in df.sort_values("Tenor")["Tenor"].unique():
+        dfx = df[df["Tenor"]==t].sort_values(k_col)
+        x,y = dfx[k_col],dfx[vol_col]
+        f = spline(x,y,k=2)
+        atm_var = (float(f(0))**2)*(t/365)
+        atm_vars.loc[len(atm_vars)] = [t,atm_var] #;print([t,atm_var]) 
+    return df.set_index("Tenor").join(atm_vars.set_index("Tenor")).reset_index() 
 
-def get_tenor(df,cols):
-    for x in cols: df[x] = pd.to_datetime(df[x],format="%d/%m/%Y")
-    df["Tenor"] = (df[cols[1]]-df[cols[0]]).dt.days
-    for x in cols: df[x] = df[x].apply(lambda x:x.strftime("%d/%m/%Y"))
-    return df
+def density_moments(K,P,S,T):
+    mean = sum([k*p for k,p in zip(K,P)])
+    variance = sum([p*(k-mean)**2 for k,p in zip(K,P)])
+    skewness = sum([p*((k-mean)/sqrt(variance))**3 for k,p in zip(K,P)])
+    kurtosis = sum([p*((k-mean)/sqrt(variance))**4 for k,p in zip(K,P)])
+    stddev = (sqrt(variance)/S)/sqrt(T)
+    return mean,variance,skewness,kurtosis,stddev
 
-def get_forward(T,S,r,q): return S*exp((-r-q)*(T/365))
-    
-def get_logstrike(K,T,S,r,q): return log(K/(S*exp((-r-q)*(T/365))))
+#Total variances do not intersect = no calendar arb; density is non-negative = no fly arb
+def graph(a,b,m,V,T,F,S,params):
+    K = np.linspace(a,b,m)
+    jumpwings = pd.DataFrame(columns=["Tenor","AtmVar","AtmSkew","PWingSlope","CWingSlope","MinVar"])
+    moments = pd.DataFrame(columns=["Tenor","Mean","Variance","Skewness","Kurtosis","StdDev"])
+    for v,t,fwd in zip(V.unique(),T.unique(),F.unique()):
+        k = log(K/fwd)
+        w = SSVI().surface(k,v,*params)
+        plt.plot(k,w,label=f"t {t} total variance")
+        jumpwings.loc[len(jumpwings)] = [t,*SSVI().jumpwings(t,v,*params)]
+    plt.legend();plt.show()
+    for v,t,fwd in zip(V.unique(),T.unique(),F.unique()):
+        k = log(K/fwd)
+        f = spline(k,SSVI().rnd(k,v,*params),k=2)
+        k = np.linspace(k[0],k[-1],m)
+        P = [(k[1]-k[0])*p for p in f(k)]
+        plt.plot(k,P,label=f"t {t} area {round(sum(P),3)}")
+        K = fwd*exp(k)
+        moments.loc[len(moments)] = [t,*density_moments(K,P,S,t/365)]
+    plt.legend();plt.show() #add return frame of moments and jump wings per slice
+    return moments,jumpwings
+#------------------------------------------------------------------------------------------------
+qdate,qtime = "15/05/2020","15:30"
+df = query.query("Calibration",f"select * from dbo.vols where Date = '{qdate}' and Time = '{qtime}'")
 
-def get_strike_vector(minK,dK,maxK): return np.array([i*dK for i in range(int(minK/dK),int(maxK/dK)+3)])
-
-def raw(x,a,b,rho,m,sigma): return a+b*(rho*(x-m)+sqrt((x-m)**2+sigma**2))
-
-def correlation(theta,a,b,c): return a*exp(-b*theta)+c
-
-def power_law(theta,eta,gamma): 
-    return eta/theta**gamma*(1+theta)**(1-gamma)
-
-def fly_constraint1(params,theta):
-    a,b,c,eta,gamma = params
-    rho = correlation(theta,a,b,c)
-    phi = power_law(theta,eta,gamma)
-    return (theta*phi*(1+abs(rho)))+4
-
-def fly_constraint2(params,theta): 
-    a,b,c,eta,gamma = params
-    rho = correlation(theta,a,b,c)
-    phi = power_law(theta,eta,gamma)
-    return (theta*phi**2*(1+abs(rho)))+(4+1e-10)
-    
-def eta_constraint3(params,theta):
-    a,b,c,eta,gamma = params
-    rho = correlation(theta,a,b,c)
-    return eta*(1-abs(rho))+(2+1e-10)
-
-def eta_constraint1(params,theta):
-    a,b,c,eta,gamma = params
-    rho = correlation(theta,a,b,c)
-    return eta+(4*max(theta)**(gamma-1))/(1+abs(rho))
-
-def eta_constraint2(params,theta):
-    a,b,c,eta,gamma = params
-    rho = correlation(theta,a,b,c)
-    return eta+(2*max(theta)**(gamma-1/2))/(sqrt(1+abs(rho)))
-    
-def rho_constraint(params,theta):
-    a,b,c,eta,gamma = params
-    rho = correlation(theta,a,b,c)
-    return abs(rho)+1
-
-def gamma_constraint(params,theta):
-    a,b,c,eta,gamma = params
-    rho = correlation(theta,a,b,c)
-    return gamma+((1+sqrt(1-rho**2))/rho**2)
-
-def abc_constraint(params):
-    a,b,c,eta,gamma = params
-    return abs((c-a)/(1-gamma*exp(gamma-2)))+1
-
-def ac_constraint(params):
-    a,b,c,eta,gamma = params
-    return abs(a+c)+1
-
-def surface(k,theta,a,b,c,eta,gamma):
-    rho = correlation(theta,a,b,c)
-    phi = power_law(theta,eta,gamma)
-    return (theta/2)*(1+rho*phi*k+sqrt((k*phi+rho)**2+(1-rho**2)))
-
-#Breeden&Litzenberger density: taking second derivative of call price to strike
-def rnd(K,T,S,r,q,w):
-    dK = (K[1]-K[0])
-    C = get_value("Call",S,K,T,r,q,sqrt(w))
-    Q = [exp(r*(T/365))*(c2-(2*c1)+c0)/dK for c2,c1,c0 in zip(C[2:],C[1:-1],C[:-2])]
-    return Q
-
-#Minimise weighted absolute distance from mid prices
-def residual(params,df,k,v,t):
-    S = df["Spot"].iloc[0]
-    mid_raw,vol = df["Mid"].to_numpy(),sqrt(surface(k,v,*params)/(t/365))
-    mid_svi = np.vectorize(get_value)(df["Type"],df["Spot"],df["Strike"],df["Tenor"],df["Rate"],df["ImpliedDiv"],vol)
-    weights = [1-((i-S)/S)**2 for i in df["Strike"]] #Squared distance from the spot
-    epsilon = sum([abs(r-s)*w for r,s,w in zip(mid_raw,mid_svi,weights)])**2
-    if np.isnan(epsilon) == True:
-        return 1e3
-    else:
-        return epsilon
-
-def optimise_surface(df):
-    k = df["LogStrike"].to_numpy()
-    v = df["AtmVar"].to_numpy()
-    t = df["Tenor"].to_numpy()
-    guess = (-0.2,10,-0.2,0.5,0.25)
-    bounds = ((-inf,inf),(0,inf),(-1,1),(0,1),(0,0.5))
-    res = minimize(residual,guess,args=(df,k,v,t),method="SLSQP",options={"maxiter":5000},bounds=bounds,
-    constraints=({"type":"ineq","fun":eta_constraint1,"args":(v,)},
-                 {"type":"ineq","fun":eta_constraint2,"args":(v,)},
-                 {"type":"ineq","fun":eta_constraint3,"args":(v,)},
-                 {"type":"ineq","fun":fly_constraint1,"args":(v,)},
-                 {"type":"ineq","fun":fly_constraint2,"args":(v,)},
-                 {"type":"ineq","fun":rho_constraint,"args":(v,)},
-                 {"type":"ineq","fun":gamma_constraint,"args":(v,)},
-                 {"type":"ineq","fun":abc_constraint},
-                 {"type":"ineq","fun":ac_constraint}))
-    chi = pd.DataFrame(columns=["S","t","r","q","theta","a","b","c","eta","gamma"])
-    S,r = df["Spot"].iloc[0],df["Rate"].iloc[0]
-    for t,q,v in zip(df["Tenor"].unique(),df["ImpliedDiv"].unique(),df["AtmVar"].unique()):
-        chi.loc[len(chi)] = [S,t,r,q,v,*res.x]
-    return chi.set_index("t").join(graphs(df,res.x)).reset_index()
-
-def trim_grid(df):
-    df = get_tenor(df,["Date","Expiry"])
-    cols = ["Strike","Bid","Ask","Spread","Mid"]
-    df[cols] = df[cols].astype(float)
-    df["Moneyness"] = df["Strike"]/df["Spot"]
-    df = df[(df["Tenor"]!=0)&(df["Bid"]>0.1)&(df["Ask"]>0.1)] #&(df["Moneyness"]>0.7)&(df["Moneyness"]<1.3)]
-    return df
-  
-def get_atm(df,plot=False):
-    df["LogStrike"] = np.vectorize(get_logstrike)(df["Strike"],df["Tenor"],df["Spot"],df["Rate"],df["ImpliedDiv"])
-    df["ImpliedVar"] = np.vectorize(bisect)(df["Type"],df["Mid"],df["Spot"],df["Strike"],df["Tenor"],df["Rate"],df["ImpliedDiv"])**2
-    df = df.dropna()
-    dfw = pd.DataFrame(columns=["Tenor","AtmVar"])
-    for t in sorted(df["Tenor"].unique()):
-        dfx = df[df["Tenor"]==t].drop_duplicates(["LogStrike"]).sort_values(by=["LogStrike"])
-        k = dfx["LogStrike"].to_numpy()
-        w = dfx["ImpliedVar"].to_numpy()
-        interp = interp1d(k,w,kind="cubic")
-        theta = interp(0)*(t/365)
-        dfw.loc[len(dfw)] = [t,theta]
-    df = df.set_index("Tenor").join(dfw.set_index("Tenor")).reset_index()
-    if plot==True: 
-        print(dfw)
-        plt.plot(dfw["Tenor"],dfw["AtmVar"])
-        plt.show()
-    return df.sort_values(by=["Strike"])
-
-def get_implied_div(df,ex_itm_puts=False,plot=False):
-    dfx = df[df["Moneyness"]>=1] if ex_itm_puts==True else df
-    S,r = df["Spot"].iloc[0],df["Rate"].iloc[0]
-    def q(K,S,CP,T,r): return -1/(T/365)*log((CP+K*exp(-r*(T/365)))/S)   
-    dfx = dfx[["Date","Tenor","Strike","Type","Mid"]].set_index(["Date","Tenor","Strike","Type"]).unstack(3)
-    dfx[("PutCallSpread","PutCallSpread")] = dfx[("Mid","Call")] - dfx[("Mid","Put")]
-    dfx = dfx[[("PutCallSpread","PutCallSpread")]].stack(1).reset_index().dropna(); del dfx["Type"]
-    dfx["ImpliedDiv"] = np.vectorize(q)(dfx["Strike"],S,dfx["PutCallSpread"],dfx["Tenor"],r)
-    if plot==True:
-        for t in sorted(dfx["Tenor"].unique()):
-            plt.plot(dfx[dfx["Tenor"]==t]["Strike"],dfx[dfx["Tenor"]==t]["ImpliedDiv"],label=str(t))
-        plt.legend(),plt.show()
-    return df.set_index("Tenor").join(dfx.groupby(["Tenor"]).mean()[["ImpliedDiv"]]).reset_index()
-
-query = """
-select dbo.options.*, dbo.equities.Mid as 'Spot', dbo.rates.Rate from dbo.options
-join dbo.equities on dbo.options.Date = dbo.equities.Date and dbo.options.Time = dbo.equities.Time 
-and dbo.options.Date = '06/05/2020' and dbo.options.Time = '15:20' and dbo.options.Lotsize = 10
-join dbo.rates on dbo.options.Date = dbo.rates.Date"""
-df = get_frame("Historical",query)
-df = trim_grid(df)
-df = get_implied_div(df,True,True).dropna()
-df = get_atm(df,True)
-params = optimise_surface(df)
+df["Forward"] = vct(forward)(df["Tenor"],df["MidSpot"],df["Rate"],df["MeanImpBorrow"],df["CumDivDays"],df["Div"])
+df["LogStrike"] = log(df["Strike"]/df["Forward"])
+df = tot_atm_var(df,"LogStrike","MeanVolA","TotAtmVar")
+params,errors = SSVI().fit_vols(df["LogStrike"],df["TotAtmVar"],df["Tenor"],df["MeanVolA"])
+moments,jumpwings = graph(1,90,1000,df["TotAtmVar"],df["Tenor"],df["Forward"],df["MidSpot"].iloc[0],params)
+#---------------------------------------------------------------------------------------------    
+print("--- %s sec ---" % (time.time()-start_time))
