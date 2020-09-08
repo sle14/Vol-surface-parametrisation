@@ -73,27 +73,27 @@ class SSVI(object):
         phi = self.power_law(theta,eta,gamma)
         return (theta/2)*(1+rho*phi*k+sqrt((k*phi+rho)**2+(1-rho**2)))
     
-    def residual(self,params,k,v,T,s):
-        fit_vol,mid_vol = sqrt(self.surface(k,v,*params)/(T/365)),s
+    def residual(self,params,k,theta,T,s):
+        fit_vol,mid_vol = sqrt(self.surface(k,theta,*params)/(T/365)),s
         epsilon = [abs(mv-fv) for mv,fv in zip(mid_vol,fit_vol)]
         self.slice_errors = dict()
         for t in list(set(T)): #Total absolute errors in vols per slice / num of k
-            idx = list(i for i,v in enumerate(T) if v==t)
+            idx = list(i for i,theta in enumerate(T) if theta==t)
             self.slice_errors[t] = (sum(np.array(epsilon)[idx])/len(idx))
         return sum(epsilon)**2 if np.isnan(sum(epsilon)) == False else 1e3
     
     #Fit paramterised vols to quoted vols
-    def fit_vols(self,k,v,T,s):
+    def fit_vols(self,k,theta,T,s):
         guess = (-0.2,10,-0.2,0.5,0.25)
         bounds = ((-inf,inf),(0,inf),(-1,1),(0,1),(0,0.5))
-        params = minimize(self.residual,guess,args=(k,v,T,s),method="SLSQP",options={"maxiter":5000},bounds=bounds,
-        constraints=({"type":"ineq","fun":self.eta_constraint1,"args":(v,)},
-                     {"type":"ineq","fun":self.eta_constraint2,"args":(v,)},
-                     {"type":"ineq","fun":self.eta_constraint3,"args":(v,)},
-                     {"type":"ineq","fun":self.fly_constraint1,"args":(v,)},
-                     {"type":"ineq","fun":self.fly_constraint2,"args":(v,)},
-                     {"type":"ineq","fun":self.rho_constraint,"args":(v,)},
-                     {"type":"ineq","fun":self.gamma_constraint,"args":(v,)},
+        params = minimize(self.residual,guess,args=(k,theta,T,s),method="SLSQP",options={"maxiter":5000},bounds=bounds,
+        constraints=({"type":"ineq","fun":self.eta_constraint1,"args":(theta,)},
+                     {"type":"ineq","fun":self.eta_constraint2,"args":(theta,)},
+                     {"type":"ineq","fun":self.eta_constraint3,"args":(theta,)},
+                     {"type":"ineq","fun":self.fly_constraint1,"args":(theta,)},
+                     {"type":"ineq","fun":self.fly_constraint2,"args":(theta,)},
+                     {"type":"ineq","fun":self.rho_constraint,"args":(theta,)},
+                     {"type":"ineq","fun":self.gamma_constraint,"args":(theta,)},
                      {"type":"ineq","fun":self.abc_constraint},
                      {"type":"ineq","fun":self.ac_constraint}))
         return params.x,self.slice_errors
@@ -188,5 +188,9 @@ df["LogStrike"] = log(df["Strike"]/df["Forward"])
 df = tot_atm_var(df,"LogStrike","MeanVolA","TotAtmVar")
 params,errors = SSVI().fit_vols(df["LogStrike"],df["TotAtmVar"],df["Tenor"],df["MeanVolA"])
 moments,jumpwings = graph(1,90,1000,df["TotAtmVar"],df["Tenor"],df["Forward"],df["MidSpot"].iloc[0],params)
+
+#Jump wings - get natural parameters eg skew, kurt etc
+#but unterstand how constrains affect the curve and arbs etc
+
 #---------------------------------------------------------------------------------------------    
 print("--- %s sec ---" % (time.time()-start_time))
