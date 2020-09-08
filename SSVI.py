@@ -13,7 +13,7 @@ start_time = time.time()
 np.seterr(divide='ignore')
 np.warnings.filterwarnings('ignore')
 
-class SSVI(object):
+class SSVI:
     def __init__(self):
         self.slice_errors = dict() #Mean error per slice
 
