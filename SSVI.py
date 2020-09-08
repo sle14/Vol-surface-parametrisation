@@ -188,9 +188,5 @@ df["LogStrike"] = log(df["Strike"]/df["Forward"])
 df = tot_atm_var(df,"LogStrike","MeanVolA","TotAtmVar")
 params,errors = SSVI().fit_vols(df["LogStrike"],df["TotAtmVar"],df["Tenor"],df["MeanVolA"])
 moments,jumpwings = graph(1,90,1000,df["TotAtmVar"],df["Tenor"],df["Forward"],df["MidSpot"].iloc[0],params)
-
-#Jump wings - get natural parameters eg skew, kurt etc
-#but unterstand how constrains affect the curve and arbs etc
-
 #---------------------------------------------------------------------------------------------    
 print("--- %s sec ---" % (time.time()-start_time))
