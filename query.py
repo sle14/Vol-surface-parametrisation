@@ -1,4 +1,5 @@
 from scipy.interpolate import PchipInterpolator
+from datetime import date
 import pandas as pd
 import numpy as np
 import sqlalchemy
@@ -45,10 +46,10 @@ def get_frame(database,query):
     database+'?trusted_connection=yes&driver=ODBC+Driver+13+for+SQL+Server')
     return pd.read_sql(query,con=engine)
     
-def divs(df,date,expiry):
+def divs(df,qdate,expiry):
     div = get_frame("Historical","select Symbol,exDate,Amount as 'Div' from dbo.divs")
     div = div[pd.to_datetime(div["exDate"],format="%d/%m/%Y")<pd.to_datetime(expiry,format="%d/%m/%Y")]
-    div = div[pd.to_datetime(div["exDate"],format="%d/%m/%Y")>pd.to_datetime(date,format="%d/%m/%Y")]
+    div = div[pd.to_datetime(div["exDate"],format="%d/%m/%Y")>pd.to_datetime(qdate,format="%d/%m/%Y")]
     df = df.set_index("Symbol").join(div.set_index("Symbol")).reset_index()
     return df
     
@@ -67,13 +68,15 @@ def opt_chain(qdate,qtime=None):
     if qtime != None: df = df[df["Time"]==qtime]
     df = days(df,"Expiry","Date","Tenor")
     df = df.set_index("Symbol").join(div[div.index==0].set_index("Symbol")).reset_index()
+    exdate_adj = 3 if pd.to_datetime(div["exDate"].iloc[0],format="%d/%m/%Y").weekday() == 0 else 1
     df = days(df,"exDate","Date","CumDivDays")
+    df["CumDivDays"] -= exdate_adj
     df["Div"] = np.where(df["CumDivDays"]>df["Tenor"],0,df["Div"])
     df["CumDivDays"] = np.where(df["CumDivDays"]>df["Tenor"],0,df["CumDivDays"])
     return df[df["Expiry"]!=qdate].sort_values(by=["Tenor","Time","Strike"])
 
 #Add rates interpolation option in main call
-def rates(df,date,tenor):
+def rates(df,qdate,tenor):
     rate = get_frame("Historical",f"select * from dbo.rates where Date = '{date}'")    
     tenor_dict = {"12M":365,"6M":365/2,"3M":365/4,"1M":365/12,"1W":365/52.1429,"ON":1}
     rate["Tenor"] = rate["Tenor"].replace(tenor_dict)

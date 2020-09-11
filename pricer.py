@@ -141,7 +141,7 @@ def fit_spread(df,R,ref_bid,ref_ask,new_col):
     for T in sorted(df["Tenor"].unique()):
         for t  in sorted(df["Time"].unique()):
             dfx = df[(df["Tenor"]==T)&(df["Time"]==t)]
-            K = dfx["Strike"]; print([T,t])
+            K = dfx["Strike"]#; print([T,t])
             spread = dfx[ref_ask]-dfx[ref_bid]
             popt,pcov = curve_fit(f,K,spread,bounds=((0),(inf)),p0=(min(spread),0.01,df["MidSpot"].iloc[0]))
             params.loc[len(params)] = [T,t,list(popt)]
@@ -179,7 +179,7 @@ class Vol:
         if abs(epsilon) > 1e-5:
             return epsilon
         else:
-            print([self.AE,self.R,T,t,K,s])
+            #print([self.AE,self.R,T,t,K,s])
             return 0 
         
     def residual_ame(self,s,PX,T,S,K,r,q,H,t):
@@ -191,7 +191,7 @@ class Vol:
         if abs(epsilon) > 1e-5:
             return epsilon
         else:
-            self.eep,self.eeb = eep,B; print([self.AE,self.R,T,t,K,s])
+            self.eep,self.eeb = eep,B#; print([self.AE,self.R,T,t,K,s])
             return 0   
             
     def root(self,PX,T,S,K,r,q,t,x0=None,H=None):
@@ -204,7 +204,7 @@ class Vol:
                     s = bisect(self.residual_ame,0.1,2,args=(PX,T,S,K,r,q,H,t))
                     return s,self.eep,np.array(self.eeb,dtype=object)
                 except:
-                    print("No solution for",[self.AE,self.R,T,t,K])
+                    #print("No solution for",[self.AE,self.R,T,t,K])
                     return np.nan,np.nan,np.array([0]*(self.M+1),dtype=object)
         else:
             try:
@@ -213,5 +213,5 @@ class Vol:
                 try:
                     return newton(self.residual_eur,x0=1,args=(PX,T,S,K,r,q,t))
                 except:
-                    print("No solution for",[self.AE,self.R,T,t,K])
+                    #print("No solution for",[self.AE,self.R,T,t,K])
                     return np.nan
