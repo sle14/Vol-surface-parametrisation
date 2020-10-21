@@ -4,7 +4,7 @@ My initial goal was to find robust way of generating arb-free vol surface on sin
 
 I went along with Kim integral approximation method instead of trees, as it has a very useful feature of decomposition of american options value into european base and early exercise values. However, as this method involves numerical solution of quadrature formulas on each step exercise boundary, even with numpy vectorisation and broadcasting it was still a bit too slow. So I wrote the base class in C++ and used ctypes lib to call its functions from Python, which made it around 10 times faster. After that I have used bisection with vanilla BSM pricing to determine initial guess and boundaries for brent method that minimised american price residual using Kim's approximation. 
 
-Having derived de-americanised vols, I was able to fit SSVI on them directly. Wings had better albeit still inaccurate fit, which was due to liquidity premium. Capturing this would involve placing certain assumptions on liquidation value for options holder that are independent from divs and spread, ie Poisson process with time to expiry as its intensity. 
+Having derived de-americanised vols, I was able to fit SSVI on them directly. Wings had better albeit still inaccurate fit, which was due to liquidity premium. Capturing this would involve placing certain assumptions on liquidation value for options holder that are independent from divs and spread, eg modelling this as Poisson process with time to expiry as its intensity. 
 
 Minimisation
 
