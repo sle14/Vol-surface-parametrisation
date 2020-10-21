@@ -1,3 +1,5 @@
+![Image of Yaktocat](https://github.com/sle14/Vol-surface-parametrisation/blob/master/1.PNG?raw=true)
+
 # Vol-surface-parametrisation
 Parametrisation of vol surface using Gatheral's SVI methodology
 
