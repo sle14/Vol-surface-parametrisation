@@ -6,6 +6,15 @@ I went along with Kim integral approximation method instead of trees, as it has 
 
 Having derived de-americanised vols, I was able to fit SSVI on them directly. Wings had better albeit still inaccurate fit, which was due to liquidity premium. Capturing this would involve placing certain assumptions on liquidation value for options holder that are independent from divs and spread, eg modelling this as Poisson process with time to expiry as its intensity. 
 
+I have used listed quotes of 41 most liquid US traded single names with 3 front month expiries per each where available. I truncated extreme strikes and dropped every nth strike for certain names like TSLA. Daily historical data is in 10 mins interval, funding rate used is 6M USD Libor and number of trading days 253 (as of 2020). Data is gathered in overnight batch and stored in SQL db as are vols that are solved as soon as Libor rates are published for previous day. 
+
+Calibration to market is done after that using SLSQP algorithm with constrains and bounds to prevent arbitrage in the surface. For convexity parameter phi, power law is used and for skew term structure rho, dependency on total at the money forward is ensured. Risk neutral density is derived using fitted SSVI parameters with explicit differentiation of BSM formula and primes of surface function. I have changed Jump-wing parameters from 5 to 3 where we now have ATMF Vol, 1st and 2nd derivatives of ATMF variance (skew & kurtosis), when we shock these parameters we can invert them back to raw parameters to get the new vol surface.
+
+All the above is packed into numpy structs to allow for better handling of multi-dimensionality and memory optimisation, ie in case of plotting payoffs and liquidation values wrt dSpot and dTime. I have used plotly and ipwidgets for interface, and voila for server. 
+
+![Example](https://github.com/sle14/Vol-surface-parametrisation/blob/master/examples/1.PNG?raw=true)
+
+
 Minimisation
 
 <img src="https://render.githubusercontent.com/render/math?math=k = K/F_{T}">
