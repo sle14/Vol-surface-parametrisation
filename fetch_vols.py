@@ -13,8 +13,8 @@ np.warnings.filterwarnings('ignore')
 base = 253
 
 symbol = "AAL"
-qdate = "07/10/2020"
-qtime = "18:40"
+qdate = "20/10/2020"
+qtime = "14:40"
 curr = "USD"
 
 q = "select distinct Symbol from dbo.chains where Symbol != 'FP'"
@@ -26,29 +26,29 @@ try:
         while True:
             df = query.front_series(3,symbol,curr,qdate)
             
-            # #Check quotes are populated
-            # remainder = query.opt_remainder(3,symbol,curr,qdate)
-            # if remainder.empty == False: 
-            #     left = len(remainder)
-            #     cout.info(f"{symbol} - {left} quotes missing, waiting for fetch to populate") 
-            #     sleep(60)
-            #     continue
+            #Check quotes are populated
+            remainder = query.opt_remainder(3,symbol,curr,qdate)
+            if remainder.empty == False: 
+                left = len(remainder)
+                cout.info(f"{symbol} - {left} quotes missing, waiting for fetch to populate") 
+                sleep(60)
+                continue
             
-            # #Check if table exist and vols are populated
-            # tables = query.get("Vols",f"select count(*) from information_schema.tables where table_name = '{symbol}'").iloc[0,0]
-            # if tables == 1:
-            #     q = f"select distinct Time,Tenor,Strike from dbo.{symbol} where Date = convert(datetime,'{qdate}',103) order by Tenor,Strike"
-            #     vols = query.get("Vols",q)
-            #     quotes = df[["Time","Tenor","Strike"]].drop_duplicates()
-            #     if len(vols) == len(quotes):
-            #         cout.info(f"{symbol} - vols already populated, moving on to next") 
-            #         break
-            #     elif len(vols) > 0:
-            #         cout.warn(f"{symbol} - vols are partially populated, cleaning up")
-            #         q = f"delete from dbo.{symbol} where Date = convert(datetime,'{qdate}',103)"
-            #         query.execute("Vols",q)
-            #     else:
-            #         cout.info(f"{symbol} - vols are empty for the selected date & symbol") 
+            #Check if table exist and vols are populated
+            tables = query.get("Vols",f"select count(*) from information_schema.tables where table_name = '{symbol}'").iloc[0,0]
+            if tables == 1:
+                q = f"select distinct Time,Tenor,Strike from dbo.{symbol} where Date = convert(datetime,'{qdate}',103) order by Tenor,Strike"
+                vols = query.get("Vols",q)
+                quotes = df[["Time","Tenor","Strike"]].drop_duplicates()
+                if len(vols) == len(quotes):
+                    cout.info(f"{symbol} - vols already populated, moving on to next") 
+                    break
+                elif len(vols) > 0:
+                    cout.warn(f"{symbol} - vols are partially populated, cleaning up")
+                    q = f"delete from dbo.{symbol} where Date = convert(datetime,'{qdate}',103)"
+                    query.execute("Vols",q)
+                else:
+                    cout.info(f"{symbol} - vols are empty for the selected date & symbol") 
             
             #Main
             cout.info(f"{symbol} - initing vol fetch")
@@ -77,8 +77,12 @@ try:
             args = utils.select(st,["PutMid","SpotMid","Strike","Tenor","Rate"])
             pvol,peep = f(*args)
             
+            cvol = utils.apply(pricer.interp,1,st,["Time","Tenor"],[lst,cvol],asarray=True,fill=True)
+            pvol = utils.apply(pricer.interp,1,st,["Time","Tenor"],[lst,pvol],asarray=True,fill=True)
+            
             rvol = (cvol + pvol)/2
             svol = utils.apply(pricer.interp,1,st,["Time","Tenor"],[lst,rvol],asarray=True,fill=True)
+            
             var = utils.apply(pricer.totatmfvar,1,st,["Time","Tenor"],[st["Tenor"],lst,svol],asarray=True,fill=True)
             
             ar = np.column_stack([unstruct(st),yld,chs,phs,fwd,lst,cvol,ceep,pvol,peep,rvol,svol,var])

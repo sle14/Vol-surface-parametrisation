@@ -112,6 +112,9 @@ out_cols = [       #Dependent vars:
             "PCH", #Put charm
             "CPY", #Call payoff
             "PPY", #Put payoff
+            "CER", #Call px errors, fitted vs raw
+            "PER", #Put px errors, fitted vs raw
+            "VER", #Vall errors, fitted vs raw
            ]
 raw_cols = [        #Raw vars
             "RVOL", #Vol
@@ -170,18 +173,21 @@ class ChainStruct:
     def __init__(self,params,vols,k):
         self.prg_pay = Progress()                                               #Payoff build exec progress
         self.prg_trm = Progress()                                               #Term build exec progress
+        
         self.days_pass = np.arange(0,max(vols.index)+1,1)                       #Days deducted from for dTenor
         self.pct_moves = np.linspace(-0.5,0.5,101)                              #Pct change vector for dSpot
         self.params = params                                                    #Params df with fitted vol params
         self.vols = vols                                                        #Vols df with raw vals per strike
         self.groups = len(params)                                               #Expiry group count
         self.k = k                                                              #Logstrike vector
+        
         self.clear_factor()                                                     #Factor struct
         self.ss = self.pack_smt()                                               #Smooth k struct
         self.rs = self.pack_raw()                                               #Raw struct
         self.ps = self.pack_pay()                                               #Payoff/return struct
         self.ns = self.pack_trm()                                               #Term struct
         self.ts = self.pack_trd()                                               #Trades struct
+        
         prg_load.val += 0.1
         self.pop(0)                                                             #Pop open leg
         prg_load.val += 0.1
@@ -515,6 +521,12 @@ class ChainStruct:
             rs[g][:,leg] = getattr(bsm,a)(S,K,T)
         rs["CHS"][:,leg] = pricer.halfspread(K,rs["CH0"][:,leg],rs["CH1"][:,leg],rs["CKH"][:,leg],"C")
         rs["PHS"][:,leg] = pricer.halfspread(K,rs["PH0"][:,leg],rs["PH1"][:,leg],rs["PKH"][:,leg],"P")
+        
+        if leg == 0:
+            rs["CER"][:,0] = rs["RCMD"][:,0] - rs["CPX"][:,0]
+            rs["PER"][:,0] = rs["RPMD"][:,0] - rs["PPX"][:,0]
+            rs["VER"][:,0] = rs["RVOL"][:,0] - rs["VOL"][:,0]
+            
         self.rs = rs
     
     def build_trm(self,ex_jump=True):
@@ -735,9 +747,10 @@ def create_figure(xtitle,ytitle,legend_title,width,height,l,r,b,t,yzeroline=Fals
                      linecolor=c.lightgray,zerolinecolor=c.lightgray,zerolinewidth=1)
     return fig
 
-def add_trace(fig,x,y,name,group,mode,colour,legend=True,marker_size=4):
+def add_trace(fig,x,y,name,group,mode,colour,legend=True,marker_size=4,visible=True):
     fig.add_trace(go.Scatter(
             x = x, y = y, 
+            visible = visible,
             mode = mode, 
             name = name,
             legendgroup = group,
@@ -774,9 +787,10 @@ class LoadData:
         self.qdate = qdate
         self.qtime = qtime
 
-    def start(self): #Return here instead of post& get -> not efficient
+    def start(self,loc=0,scale=0): #Return here instead of post& get -> not efficient
         prg_load.val += 0.1
-        params = calibrator.surface(self.symbol,self.qdate,self.qtime,errors=False,post=True)
+        params,errors = calibrator.surface(self.symbol,self.qdate,self.qtime,errors=True,post=False,loc=loc,scale=scale)
+        self.errors = errors
         prg_load.val += 0.1
         k = np.hstack([-np.linspace(1,0,101)[:-1],np.linspace(0,0.7,71)])
         vols = query.vols(self.symbol,"USD",self.qdate,self.qtime)
