@@ -1,6 +1,6 @@
 # Vol Surface Parametrisation
 
-# Contents
+## Contents
 
 - [About](#about)
 - [Features](#features)
@@ -8,7 +8,7 @@
 - [Formulas](#formulas)
 - [References](#references)
 
-# About
+## About
 
 My initial goal was to find robust way of generating arb-free vol surface on single stock option quotes, so that I would be able to determine change in portfolio liquidation value for change in moments of vol, spreads, cost of carry, price of underlying and time. I have decided to use Gatheral's Surface Stohastic Volatility Inspired (SSVI) method for this, but had few issues with poor fit, which was expected as I was using vols from american quotes which explode in wings, particularly before the ex-date. So instead of direct minimisation on raw vols I had to first de-americanise them, by deducting the premium they command with respect to european quotes.
 
@@ -18,7 +18,7 @@ Calibration to the market is done using SLSQP algorithm with constrains and boun
 
 All the above is packed into numpy structs to allow for better handling of multi-dimensionality and memory optimisation, ie in case of plotting payoffs and liquidation values wrt dSpot and dTime. I have used plotly and ipwidgets for interface, and voila for the server. 
 
-# Features
+## Features
 
 - Breakdown of positions liquidation value by Greeks, Spread and EEP for given changes in 11 factors by expiry group.
 - Plotting of payoffs and values for dS and dT ranges that use the factor changes as specified by user and consider Spread and EEP.
@@ -26,11 +26,11 @@ All the above is packed into numpy structs to allow for better handling of multi
 - Daily data with 10 minute interval for 40 listed US single stock option names, with 3 front month expiries per each where available.
 - Ability to specify weights for the SSVI fit residual based on gaussian density location and scale parameters.
 
-# Guide
+## Guide
 
-# Formulas
+## Formulas
 
-## Vol Calibration ##
+**Vol Calibration**
 
 SSVI fits on total variance (w) and logstrike (k) space, where we can specify a type of convexity function (phi) and spot-vol correlation function (rho):
 
@@ -39,12 +39,12 @@ SSVI fits on total variance (w) and logstrike (k) space, where we can specify a 
 <img src="https://render.githubusercontent.com/render/math?math=\rho(\theta_{t}) = ae^{-b\theta_{t}} %2B c">
 <img src="https://render.githubusercontent.com/render/math?math=\phi(\theta_{t}) = \eta\theta_{t}^{-\lambda}">
 
-Then we minimise the below residual
+Then we need to minimise the below residual:
 
 <img src="https://render.githubusercontent.com/render/math?math=\sigma_{ssvi} = \sqrt{w(k,\theta_{t},\phi,\rho)/t}">
 <img src="https://render.githubusercontent.com/render/math?math=\epsilon = arg min(\sigma_{ssvi} - \sigma_{quotes})^2">
 
-## Risk Neutral Density ##
+**Risk Neutral Density**
 
 Explicit differentiation of BSM formula leads to:
 
@@ -61,7 +61,7 @@ And to get probability density:
 <img src="https://render.githubusercontent.com/render/math?math=d_{-}(k) = -\frac{k}{\sqrt{w}}\frac{\sqrt{w}}{2}">
 <img src="https://render.githubusercontent.com/render/math?math=p(k) = \frac{g(k)}{\sqrt{2\pi w(k)}}e^{-\frac{d_{-}(k)}{2}^2}">
 
-## Jumpwings ##
+**Jumpwings**
 
 <img src="https://render.githubusercontent.com/render/math?math=v_{t} = \frac{\theta_{t}}{t}">
 <img src="https://render.githubusercontent.com/render/math?math=\psi_{t} = \frac{1}{2}\rho(\theta_{t}) \phi(\theta_{t}) \sqrt{\theta}">
@@ -69,27 +69,27 @@ And to get probability density:
 <img src="https://render.githubusercontent.com/render/math?math=c_{t} = \frac{1}{2}\sqrt{\theta_{t}}\phi(\theta_{t})(1 %2B \rho)">
 <img src="https://render.githubusercontent.com/render/math?math=\widetilde{v_{t}} = \frac{\theta_{t}}{t}(1-\rho(\theta_{t})^2)">
 
-## European options value ##
+**European options value**
 
 <img src="https://render.githubusercontent.com/render/math?math=c(S,T) = Se^{-qT}N(d1(S,K,T))-Ke^{-rT}N(d2(S,K,T))">
 <img src="https://render.githubusercontent.com/render/math?math=p(S,T) = Ke^{-rT}N(-d2(S,K,T))-Se^{-qT}N(-d1(S,K,T))">
 
-## Early exercise premium ##
+**Early exercise premium**
 
 <img src="https://render.githubusercontent.com/render/math?math=EEP_{Call}(S,T) = \int_{0}^{T} [qB_{t}e^{-q(T-t)}N(d1(S,B_{t},T-t))-rKe^{-r(T-t)}N(d2(S,B_{t},T-t))] dt">
 <img src="https://render.githubusercontent.com/render/math?math=EEP_{Put}(S,T) = \int_{0}^{T} [rKe^{-r(T-t)}N(-d2(S,B_{t},T-t))-qB_{t}e^{-q(T-t)}N(-d1(S,B_{t},T-t))] dt">
 
-## American options value ##
+**American options value**
 
 <img src="https://render.githubusercontent.com/render/math?math=C(S,T) = c(S,T) %2B EEP_{Call}(S,T)">
 <img src="https://render.githubusercontent.com/render/math?math=P(S,T) = p(S,T) %2B EEP_{Put}(S,T)">
 
-## Spread function ##
+**Spread function**
 
 <img src="https://render.githubusercontent.com/render/math?math=H_{Call}(S) = H_{0} %2B H_{1}max(S-K_{h},0)">
 <img src="https://render.githubusercontent.com/render/math?math=H_{Put}(S) = H_{0} %2B H_{1}max(K_{h}-S,0)">
 
-## Terminal condition ##
+**Terminal condition**
 
 <img src="https://render.githubusercontent.com/render/math?math=B_{T,Call} = Kmax(1,\frac{r}{q})">
 <img src="https://render.githubusercontent.com/render/math?math=B_{T,Put} = Kmin(1,\frac{r}{q})">
