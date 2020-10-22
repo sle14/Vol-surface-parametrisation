@@ -44,6 +44,8 @@ Then we minimise the below residual
 <img src="https://render.githubusercontent.com/render/math?math=\sigma_{ssvi} = \sqrt{w(k,\theta_{t},\phi,\rho)/t}">
 <img src="https://render.githubusercontent.com/render/math?math=\epsilon = arg min(\sigma_{ssvi} - \sigma_{quotes})^2">
 
+___
+
 **Risk Neutral Density**
 
 Explicit differentiation of BSM formula leads to:
@@ -61,6 +63,7 @@ And to get probability density:
 <img src="https://render.githubusercontent.com/render/math?math=d_{-}(k) = -\frac{k}{\sqrt{w}}\frac{\sqrt{w}}{2}">
 <img src="https://render.githubusercontent.com/render/math?math=p(k) = \frac{g(k)}{\sqrt{2\pi w(k)}}e^{-\frac{d_{-}(k)}{2}^2}">
 
+
 **Jumpwings**
 
 <img src="https://render.githubusercontent.com/render/math?math=v_{t} = \frac{\theta_{t}}{t}">
@@ -69,30 +72,36 @@ And to get probability density:
 <img src="https://render.githubusercontent.com/render/math?math=c_{t} = \frac{1}{2}\sqrt{\theta_{t}}\phi(\theta_{t})(1 %2B \rho)">
 <img src="https://render.githubusercontent.com/render/math?math=\widetilde{v_{t}} = \frac{\theta_{t}}{t}(1-\rho(\theta_{t})^2)">
 
+
 **European options value**
 
 <img src="https://render.githubusercontent.com/render/math?math=c(S,T) = Se^{-qT}N(d1(S,K,T))-Ke^{-rT}N(d2(S,K,T))">
 <img src="https://render.githubusercontent.com/render/math?math=p(S,T) = Ke^{-rT}N(-d2(S,K,T))-Se^{-qT}N(-d1(S,K,T))">
+
 
 **Early exercise premium**
 
 <img src="https://render.githubusercontent.com/render/math?math=EEP_{Call}(S,T) = \int_{0}^{T} [qB_{t}e^{-q(T-t)}N(d1(S,B_{t},T-t))-rKe^{-r(T-t)}N(d2(S,B_{t},T-t))] dt">
 <img src="https://render.githubusercontent.com/render/math?math=EEP_{Put}(S,T) = \int_{0}^{T} [rKe^{-r(T-t)}N(-d2(S,B_{t},T-t))-qB_{t}e^{-q(T-t)}N(-d1(S,B_{t},T-t))] dt">
 
+
 **American options value**
 
 <img src="https://render.githubusercontent.com/render/math?math=C(S,T) = c(S,T) %2B EEP_{Call}(S,T)">
 <img src="https://render.githubusercontent.com/render/math?math=P(S,T) = p(S,T) %2B EEP_{Put}(S,T)">
+
 
 **Spread function**
 
 <img src="https://render.githubusercontent.com/render/math?math=H_{Call}(S) = H_{0} %2B H_{1}max(S-K_{h},0)">
 <img src="https://render.githubusercontent.com/render/math?math=H_{Put}(S) = H_{0} %2B H_{1}max(K_{h}-S,0)">
 
+
 **Terminal condition**
 
 <img src="https://render.githubusercontent.com/render/math?math=B_{T,Call} = Kmax(1,\frac{r}{q})">
 <img src="https://render.githubusercontent.com/render/math?math=B_{T,Put} = Kmin(1,\frac{r}{q})">
+
 
 **Boundary conditions: high-contact and value-matching**
 
@@ -102,10 +111,12 @@ And to get probability density:
 <img src="https://render.githubusercontent.com/render/math?math=\lim_{S\rightarrow B_{t}} P(S,K,t) = K - B_{t}">
 <img src="https://render.githubusercontent.com/render/math?math=\lim_{S\rightarrow B_{t}} C(S,K,t) = B_{t} - K">
 
+
 **Boundary solution**
 
 <img src="https://render.githubusercontent.com/render/math?math=B_{t} - K = c(B_{t},T-t) %2B EEP_{Call}(B_{t},T-t) - H(B_{t})">
 <img src="https://render.githubusercontent.com/render/math?math=K - B_{t} = p(B_{t},T-t) %2B EEP_{Put}(B_{t},T-t) - H(B_{t})">
+
 
 **Trapezoid rule**
 
