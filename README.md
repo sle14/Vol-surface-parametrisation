@@ -10,7 +10,7 @@
 
 ## About
 
-My initial goal was to find robust way of generating arb-free vol surface on single stock option quotes, so that I would be able to determine change in portfolio liquidation value for change in moments of vol, spreads, cost of carry, price of underlying and time. I have decided to use Gatheral's Surface SVI method for this, but had few issues with poor fit, which was expected as I was using vols from american quotes which explode in wings, particularly before the ex-date. So instead of direct minimisation on raw vols I had to first de-americanise them, by deducting the premium they command with respect to european quotes.
+My initial goal was to find robust way of generating arb-free vol surface on single stock option quotes, so that I would be able to determine change in portfolio liquidation value for change in moments of vol, spreads, cost of carry, price of underlying and time. I have decided to use Gatheral's Surface Stohastic Volatility Inspired (SSVI) method for this, but had few issues with poor fit, which was expected as I was using vols from american quotes which explode in wings, particularly before the ex-date. So instead of direct minimisation on raw vols I had to first de-americanise them, by deducting the premium they command with respect to european quotes.
 
 For this I went along with Kim integral approximation method instead of trees, as it has a very useful feature of decomposition of american options value into european base and early exercise values. However, as this method involves numerical solution of quadrature formulas on each step exercise boundary, even with numpy vectorisation and broadcasting it was still a bit too slow. So I wrote the base class in C++ and used ctypes lib to call its functions from Python. Having derived de-americanised vols, I was able to fit SSVI on them directly.
 
@@ -31,10 +31,16 @@ All the above is packed into numpy structs to allow for better handling of multi
 ## Formulas
 
 **Vol Calibration**
-<img src="https://render.githubusercontent.com/render/math?math=k = K/F_{T}">
+
+SSVI fits on total variance (w) and logstrike (k) space, where we can specify a type of convexity function (phi) and spot-vol correlation function (rho):
+
 <img src="https://render.githubusercontent.com/render/math?math=w(k) = \frac{\theta_{t}}{2}(1 %2B k\rho(\theta_{t})\phi(\theta_{t}) %2B \sqrt{(k\phi(\theta_{t}) %2B \rho(\theta_{t}))^2 %2B (1-\rho(\theta_{t})^2)})">
+<img src="https://render.githubusercontent.com/render/math?math=k = K/F_{T}">
 <img src="https://render.githubusercontent.com/render/math?math=\rho(\theta_{t}) = ae^{-b\theta_{t}} %2B c">
 <img src="https://render.githubusercontent.com/render/math?math=\phi(\theta_{t}) = \eta\theta_{t}^{-\lambda}">
+
+Then we minimise the below residual
+
 <img src="https://render.githubusercontent.com/render/math?math=\sigma_{ssvi} = \sqrt{w(k,\theta_{t},\phi,\rho)/t}">
 <img src="https://render.githubusercontent.com/render/math?math=\epsilon = arg min(\sigma_{ssvi} - \sigma_{quotes})^2">
 
