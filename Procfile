@@ -1,1 +1,0 @@
-web: voila --port=$PORT --no-browser simulator.ipynb
