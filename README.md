@@ -25,7 +25,6 @@ All the above is packed into numpy structs to allow for better handling of multi
 ## Features
 ## Guide
 ## Formulas
-## References
 
 ![Example](https://github.com/sle14/Vol-surface-parametrisation/blob/master/examples/1.PNG?raw=true)
 
@@ -95,7 +94,7 @@ Trapezoid rule
 
 <img src="https://render.githubusercontent.com/render/math?math=\int_{a}^{b}f(x)dx \approx \Delta x[\frac{(f(x_{a}) %2B f(x_{b}))}{2} %2B \sum_{n=1}^{N-1}f(x_{n})]">
 
-# References
+## References
 [1] Gatheral, J., Jacquier, A., Arbitrage-Free SVI Volatility Surfaces. Quantitative Finance, Vol. 14, No. 1, 59-71, 2014, http://dx.doi.org/10.2139/ssrn.2033323
 
 [2] Kallast, S., Kivinukk,A. Pricing and Hedging American Options Using Approximations by Kim Integral Equations. Review of Finance, Volume 7, Issue 3, 2003, Pages 361–383, https://doi.org/10.1023/B:EUFI.0000022128.44728.4c
