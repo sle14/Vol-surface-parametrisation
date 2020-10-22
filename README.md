@@ -2,8 +2,6 @@
 
 #Add voila link here...
 
-![Example](https://github.com/sle14/Vol-surface-parametrisation/blob/master/examples/ALL.PNG?raw=true)
-
 ## Contents
 
 - [About](#about)
