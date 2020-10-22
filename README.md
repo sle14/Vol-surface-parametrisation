@@ -32,23 +32,43 @@ All the above is packed into numpy structs to allow for better handling of multi
 
 ## Guide
 
+1. Select ticker, trade date, time and click **Load**.
+
 ![Example](https://github.com/sle14/Vol-surface-parametrisation/blob/master/examples/PANEL_1.PNG?raw=true)
 
-![Example](https://github.com/sle14/Vol-surface-parametrisation/blob/master/examples/PANEL_2.PNG?raw=true)
+2. Graphs will show up as the one below, where cyan is yaxis corresponding to open leg and orange for close leg - which we will adjust via changes to params in 3.
 
 ![Example](https://github.com/sle14/Vol-surface-parametrisation/blob/master/examples/FIG_LHS_VOL_1.PNG?raw=true)
 
+3. We can go ahead and adjust params. In this case we decrease SpotPx by 5% and increase AtmVol by 5% for expiry group 0. Click **Apply** to make changes.
+
+![Example](https://github.com/sle14/Vol-surface-parametrisation/blob/master/examples/PANEL_2.PNG?raw=true)
+
+4. Select compare data on hover on the vol graph (two bars on upper rhs). Once satisfied with selected strike, right, expiry and side; lift Call 93 expiry group 0 in this case - **click**.
+
 ![Example](https://github.com/sle14/Vol-surface-parametrisation/blob/master/examples/FIG_LHS_VOL_2.PNG?raw=true)
+
+5. Red dots will appear corresponding to selected strike for open and close leg in this case.
 
 ![Example](https://github.com/sle14/Vol-surface-parametrisation/blob/master/examples/FIG_LHS_VOL_3.PNG?raw=true)
 
+6. This will also populate table as below, showing breakdown for the selected strike.
+
 ![Example](https://github.com/sle14/Vol-surface-parametrisation/blob/master/examples/TABLE_1.PNG?raw=true)
+
+7. To get pnl range for change in SpotPx click **RunPayoff** on the buttom lhs graph.
 
 ![Example](https://github.com/sle14/Vol-surface-parametrisation/blob/master/examples/FIG_PAY_1.PNG?raw=true)
 
+8. To get pnl range for change in Tenor click **RunPayoff** on the buttom rhs graph.
+
 ![Example](https://github.com/sle14/Vol-surface-parametrisation/blob/master/examples/FIG_PAY_2.PNG?raw=true)
 
+9. Changes in factors will reflect on all graphs, below one is risk neutral density for example. As you can see increasing atm vol flattens the distribution. Use this as guide to adjust surface so long as density is non negative at any point (or else this is butterfly arbitrage) and total variance never intersects (or else this is calendar arbitrage).
+
 ![Example](https://github.com/sle14/Vol-surface-parametrisation/blob/master/examples/FIG_RHS_RND_1.PNG?raw=true)
+
+10. We can select different measure for yaxis and xaxis for upper graphs, in the below example we switch to **Spreads**, and see that we paid less for on liquidation vs initiation. This is because we have simulated a 5% decrease in SpotPx and spreads widen the deeper ITM option is: so here we Kh has adjusted as per the spot move 1.05 * Kh. This behaviour can be overriden in by changing corresponding parameters, **SprdStrike** for Kh in this case.
 
 ![Example](https://github.com/sle14/Vol-surface-parametrisation/blob/master/examples/FIG_LHS_CHS_1.PNG?raw=true)
 
