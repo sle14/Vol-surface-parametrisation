@@ -30,7 +30,7 @@ All the above is packed into numpy structs to allow for better handling of multi
 
 ## Formulas
 
-**Minimisation**
+**Vol Calibration**
 
 <img src="https://render.githubusercontent.com/render/math?math=k = K/F_{T}">
 <img src="https://render.githubusercontent.com/render/math?math=w(k) = \frac{\theta_{t}}{2}(1 %2B k\rho(\theta_{t})\phi(\theta_{t}) %2B \sqrt{(k\phi(\theta_{t}) %2B \rho(\theta_{t}))^2 %2B (1-\rho(\theta_{t})^2)})">
@@ -39,7 +39,7 @@ All the above is packed into numpy structs to allow for better handling of multi
 <img src="https://render.githubusercontent.com/render/math?math=\sigma_{ssvi} = \sqrt{w(k,\theta_{t},\phi,\rho)/t}">
 <img src="https://render.githubusercontent.com/render/math?math=\epsilon = arg min(\sigma_{ssvi} - \sigma_{quotes})^2">
 
-**Density**
+**Risk Neutral Density**
 
 Explicit differentiation of BSM formula leads to:
 
