@@ -88,6 +88,7 @@ We fit the the below functions on the raw spreads to get the three parameters:
 <img src="https://render.githubusercontent.com/render/math?math=H_{Put}(S) = H_{0} %2B H_{1}max(K_{h}-S,0)">
 
 Spread widens for deeper ITM options, we make no assumption here as to where it starts to widen, but Kh should be around ATM/F.
+
 **H0:** minimum spread
 **H1:** slope the spread climb
 **Kh:** strike of spread climb
@@ -110,6 +111,7 @@ Where EEP is the integral of the boundary price (B) from present till the expiry
 <img src="https://render.githubusercontent.com/render/math?math=EEP_{Call}(S,T) = \int_{0}^{T} [qB_{t}e^{-q(T-t)}N(d1(S,B_{t},T-t))-rKe^{-r(T-t)}N(d2(S,B_{t},T-t))] dt">
 <img src="https://render.githubusercontent.com/render/math?math=EEP_{Put}(S,T) = \int_{0}^{T} [rKe^{-r(T-t)}N(-d2(S,B_{t},T-t))-qB_{t}e^{-q(T-t)}N(-d1(S,B_{t},T-t))] dt">
 
+
 **Boundary conditions**
 
 Boundary price is the price at which returns from selling options and execising it are the same, and is subject to below conditions.
@@ -129,6 +131,7 @@ Value-matching condition:
 <img src="https://render.githubusercontent.com/render/math?math=\lim_{S\rightarrow B_{t}} P(S,K,t) = K - B_{t}">
 <img src="https://render.githubusercontent.com/render/math?math=\lim_{S\rightarrow B_{t}} C(S,K,t) = B_{t} - K">
 
+
 **Boundary solution**
 
 We derive boundary via backward induction where we start at expiry and move through backwards in time. As per Terminal condition we can already find out what is the boundary on the expiry date. 
@@ -141,6 +144,7 @@ Note that we deduct half-spread from the above to adjust the difference in liqui
 We use Trapezoid rule to find the quadrature for the EEP component and final value as we integrate all the boundaries till the expiry:
 
 <img src="https://render.githubusercontent.com/render/math?math=\int_{a}^{b}f(x)dx \approx \Delta x[\frac{(f(x_{a}) %2B f(x_{b}))}{2} %2B \sum_{n=1}^{N-1}f(x_{n})]">
+
 
 ## References
 [1] Gatheral, J., Jacquier, A., Arbitrage-Free SVI Volatility Surfaces. Quantitative Finance, Vol. 14, No. 1, 59-71, 2014, http://dx.doi.org/10.2139/ssrn.2033323
