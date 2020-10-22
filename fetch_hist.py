@@ -4,9 +4,11 @@ import utils
 
 cout = utils.log(__file__,__name__)
 
+# qdate = "20/10/2020"
+
 curr = "USD"
 window = "1 D"
-qdate = "20/10/2020"
+qdate = input("Select trade date in dd/mm/yyyy format: ")
 
 q = "select distinct Symbol from dbo.chains where Symbol != 'FP'"
 symbols = query.get("Static",q)

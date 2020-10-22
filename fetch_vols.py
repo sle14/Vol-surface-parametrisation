@@ -12,10 +12,13 @@ np.seterr(divide='ignore')
 np.warnings.filterwarnings('ignore')
 base = 253
 
+# qdate = "20/10/2020"
+# qtime = "14:40"
+
 symbol = "AAL"
-qdate = "20/10/2020"
-qtime = "14:40"
 curr = "USD"
+
+qdate = input("Select trade date in dd/mm/yyyy format: ")
 
 q = "select distinct Symbol from dbo.chains where Symbol != 'FP'"
 symbols = query.get("Static",q)
