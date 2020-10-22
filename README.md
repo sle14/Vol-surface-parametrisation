@@ -1,16 +1,31 @@
-# Vol-surface-parametrisation
+## Vol Surface Parametrisation
 
-My initial goal was to find robust way of generating arb-free vol surface on single stock option quotes, so that I would be able to determine change in portfolio liquidation value for change in moments of vol, spreads, cost of carry, price of underlying and time. I have decided to use Gatheral's Surface SVI method for this, but had few issues with poor fit, which was expected as I was using vols from american quotes which explode in wings (in pure BSM setting) due to early exercise premium. So instead of direct minimisation on raw vols I had to first de-americanise them. 
 
-I went along with Kim integral approximation method instead of trees, as it has a very useful feature of decomposition of american options value into european base and early exercise values. However, as this method involves numerical solution of quadrature formulas on each step exercise boundary, even with numpy vectorisation and broadcasting it was still a bit too slow. So I wrote the base class in C++ and used ctypes lib to call its functions from Python, which made it around 10 times faster. After that I have used bisection with vanilla BSM pricing to determine initial guess and boundaries for brent method that minimised american price residual using Kim's approximation. 
 
-Having derived de-americanised vols, I was able to fit SSVI on them directly. Wings had better albeit still inaccurate fit, which was due to liquidity premium. Capturing this would involve placing certain assumptions on liquidation value for options holder that are independent from divs and spread, eg modelling this as Poisson process with time to expiry as its intensity. 
+## Contents
 
-I have used listed quotes of 41 most liquid US traded single names with 3 front month expiries per each where available. I truncated extreme strikes and dropped every nth strike for certain names like TSLA. Daily historical data is in 10 mins interval, funding rate used is 6M USD Libor and number of trading days 253 (as of 2020). Data is gathered in overnight batch and stored in SQL db as are vols that are solved as soon as Libor rates are published for previous day. 
+- [About](#about)
+- [Features](#features)
+- [Guide](#guide)
+- [Formulas](#formulas)
+- [References](#references)
 
-Calibration to market is done after that using SLSQP algorithm with constrains and bounds to prevent arbitrage in the surface. For convexity parameter phi, power law is used and for skew term structure rho, dependency on total at the money forward is ensured. Risk neutral density is derived using fitted SSVI parameters with explicit differentiation of BSM formula and primes of surface function. I have changed Jump-wing parameters from 5 to 3 where we now have ATMF Vol, 1st and 2nd derivatives of ATMF variance (skew & kurtosis), when we shock these parameters we can invert them back to raw parameters to get the new vol surface.
+## About
 
-All the above is packed into numpy structs to allow for better handling of multi-dimensionality and memory optimisation, ie in case of plotting payoffs and liquidation values wrt dSpot and dTime. I have used plotly and ipwidgets for interface, and voila for server. 
+My initial goal was to find robust way of generating arb-free vol surface on single stock option quotes, so that I would be able to determine change in portfolio liquidation value for change in moments of vol, spreads, cost of carry, price of underlying and time. I have decided to use Gatheral's Surface SVI method for this, but had few issues with poor fit, which was expected as I was using vols from american quotes which explode in wings, particularly before the ex-date. So instead of direct minimisation on raw vols I had to first de-americanise them, by deducting the premium they command with respect to european quotes.
+
+For this I went along with Kim integral approximation method instead of trees, as it has a very useful feature of decomposition of american options value into european base and early exercise values. However, as this method involves numerical solution of quadrature formulas on each step exercise boundary, even with numpy vectorisation and broadcasting it was still a bit too slow. So I wrote the base class in C++ and used ctypes lib to call its functions from Python. Having derived de-americanised vols, I was able to fit SSVI on them directly. 
+
+I have used listed quotes of 40 US traded single names with 3 front month expiries per each where available. I truncated extreme strikes and dropped every nth strike for certain names like TSLA. Daily historical data is in 10 mins interval, funding rate used is 6M USD Libor and number of trading days 253 (as of 2020). Data is gathered in overnight batch and stored in SQL db as are vols that are solved as soon as Libor rates are published for the previous day. 
+
+Calibration to the market is done after that using SLSQP algorithm with constrains and bounds to prevent arbitrage in the surface. Risk neutral density is derived using fitted SSVI parameters with explicit differentiation of BSM formula and primes of surface function. I have changed Jump-wing parameters from 5 to 3 where we now have ATMF Vol, 1st and 2nd derivatives of ATMF variance (skew & kurtosis), when we shock these parameters we can invert them back to raw parameters to get the new vol surface.
+
+All the above is packed into numpy structs to allow for better handling of multi-dimensionality and memory optimisation, ie in case of plotting payoffs and liquidation values wrt dSpot and dTime. I have used plotly and ipwidgets for interface, and voila for the server. 
+
+## Features
+## Guide
+## Formulas
+## References
 
 ![Example](https://github.com/sle14/Vol-surface-parametrisation/blob/master/examples/1.PNG?raw=true)
 
