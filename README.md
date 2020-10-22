@@ -1,5 +1,7 @@
 # Vol Surface Parametrisation
 
+#Add voila link here...
+
 ## Contents
 
 - [About](#about)
@@ -27,6 +29,26 @@ All the above is packed into numpy structs to allow for better handling of multi
 - Ability to specify weights for the SSVI fit residual based on gaussian density location and scale parameters.
 
 ## Guide
+
+![Example](https://github.com/sle14/Vol-surface-parametrisation/blob/master/examples/PANEL_1.PNG?raw=true)
+
+![Example](https://github.com/sle14/Vol-surface-parametrisation/blob/master/examples/PANEL_2.PNG?raw=true)
+
+![Example](https://github.com/sle14/Vol-surface-parametrisation/blob/master/examples/FIG_LHS_VOL_1.PNG?raw=true)
+
+![Example](https://github.com/sle14/Vol-surface-parametrisation/blob/master/examples/FIG_LHS_VOL_2.PNG?raw=true)
+
+![Example](https://github.com/sle14/Vol-surface-parametrisation/blob/master/examples/FIG_LHS_VOL_3.PNG?raw=true)
+
+![Example](https://github.com/sle14/Vol-surface-parametrisation/blob/master/examples/TABLE_1.PNG?raw=true)
+
+![Example](https://github.com/sle14/Vol-surface-parametrisation/blob/master/examples/FIG_PAY_1.PNG?raw=true)
+
+![Example](https://github.com/sle14/Vol-surface-parametrisation/blob/master/examples/FIG_PAY_2.PNG?raw=true)
+
+![Example](https://github.com/sle14/Vol-surface-parametrisation/blob/master/examples/FIG_RHS_RND_1.PNG?raw=true)
+
+![Example](https://github.com/sle14/Vol-surface-parametrisation/blob/master/examples/FIG_LHS_CHS_1.PNG?raw=true)
 
 ## Formulas
 
