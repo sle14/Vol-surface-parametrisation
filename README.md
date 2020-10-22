@@ -32,7 +32,7 @@ All the above is packed into numpy structs to allow for better handling of multi
 
 **Vol Calibration**
 
-SSVI fits on total variance (w) and logstrike (k) space, where we can specify a type of convexity function (phi) and spot-vol correlation function (rho):
+SSVI fits on total ATMF variance (θ) and logstrike (k) space, where we can specify a type of convexity function (φ) and spot-vol correlation function (ρ):
 
 <img src="https://render.githubusercontent.com/render/math?math=w(k) = \frac{\theta_{t}}{2}(1 %2B k\rho(\theta_{t})\phi(\theta_{t}) %2B \sqrt{(k\phi(\theta_{t}) %2B \rho(\theta_{t}))^2 %2B (1-\rho(\theta_{t})^2)})">
 <img src="https://render.githubusercontent.com/render/math?math=k = K/F_{T}">
@@ -61,33 +61,46 @@ And to get probability density:
 <img src="https://render.githubusercontent.com/render/math?math=d_{-}(k) = -\frac{k}{\sqrt{w}}\frac{\sqrt{w}}{2}">
 <img src="https://render.githubusercontent.com/render/math?math=p(k) = \frac{g(k)}{\sqrt{2\pi w(k)}}e^{-\frac{d_{-}(k)}{2}^2}">
 
-**Jumpwings**
+**Jump-wings**
 
-<img src="https://render.githubusercontent.com/render/math?math=v_{t} = \frac{\theta_{t}}{t}">
-<img src="https://render.githubusercontent.com/render/math?math=\psi_{t} = \frac{1}{2}\rho(\theta_{t}) \phi(\theta_{t}) \sqrt{\theta}">
-<img src="https://render.githubusercontent.com/render/math?math=p_{t} = \frac{1}{2}\sqrt{\theta_{t}}\phi(\theta_{t})(1-\rho)">
-<img src="https://render.githubusercontent.com/render/math?math=c_{t} = \frac{1}{2}\sqrt{\theta_{t}}\phi(\theta_{t})(1 %2B \rho)">
-<img src="https://render.githubusercontent.com/render/math?math=\widetilde{v_{t}} = \frac{\theta_{t}}{t}(1-\rho(\theta_{t})^2)">
+Jump-wings I have used are a bit different from the ones proposed by Gatheral, but the principle and the goal are the same. We want to know how will vol surface behave if we change 3 vol factors: level (σ), skew (ψ) and kurtosis (κ). 
 
-**European options value**
+Converting from raw to jw:
+
+<img src="https://render.githubusercontent.com/render/math?math=\sigma_{t} = \sqrt{\theta/t}">
+<img src="https://render.githubusercontent.com/render/math?math=\psi_{t} = [ \frac{1}{2}\rho\phi\sqrt{\theta}]/t">
+<img src="https://render.githubusercontent.com/render/math?math=\kappa_{t} = [ \frac{1}{2}\phi^2\theta(1 - \rho^2))]/t">
+
+Converting from jw to raw:
+
+<img src="https://render.githubusercontent.com/render/math?math=\theta_{t} = \sigma^2t">
+<img src="https://render.githubusercontent.com/render/math?math=\rho = \frac{\psi t}{\sqrt{\frac{\kappa t}{2} + (\psi t)^2}}">
+<img src="https://render.githubusercontent.com/render/math?math=\phi= \frac{2\psi t}{\rho\sqrt{\theta}}">
+
+**American options value**
+
+Is composed of european base value and early exercise premium (EEP):
 
 <img src="https://render.githubusercontent.com/render/math?math=c(S,T) = Se^{-qT}N(d1(S,K,T))-Ke^{-rT}N(d2(S,K,T))">
 <img src="https://render.githubusercontent.com/render/math?math=p(S,T) = Ke^{-rT}N(-d2(S,K,T))-Se^{-qT}N(-d1(S,K,T))">
 
-**Early exercise premium**
-
 <img src="https://render.githubusercontent.com/render/math?math=EEP_{Call}(S,T) = \int_{0}^{T} [qB_{t}e^{-q(T-t)}N(d1(S,B_{t},T-t))-rKe^{-r(T-t)}N(d2(S,B_{t},T-t))] dt">
 <img src="https://render.githubusercontent.com/render/math?math=EEP_{Put}(S,T) = \int_{0}^{T} [rKe^{-r(T-t)}N(-d2(S,B_{t},T-t))-qB_{t}e^{-q(T-t)}N(-d1(S,B_{t},T-t))] dt">
-
-**American options value**
 
 <img src="https://render.githubusercontent.com/render/math?math=C(S,T) = c(S,T) %2B EEP_{Call}(S,T)">
 <img src="https://render.githubusercontent.com/render/math?math=P(S,T) = p(S,T) %2B EEP_{Put}(S,T)">
 
 **Spread function**
 
+We fit the the below functions on the raw spreads to get the three parameters:
+
 <img src="https://render.githubusercontent.com/render/math?math=H_{Call}(S) = H_{0} %2B H_{1}max(S-K_{h},0)">
 <img src="https://render.githubusercontent.com/render/math?math=H_{Put}(S) = H_{0} %2B H_{1}max(K_{h}-S,0)">
+
+Spread widens for deeper ITM options, we make no assumption here as to where it starts to widen, but Kh should be around ATM/F.
+**H0:**minimum spread
+**H1:**slope the spread climb
+**Kh:**strike of spread climb
 
 **Terminal condition**
 
