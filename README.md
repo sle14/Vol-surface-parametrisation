@@ -77,19 +77,6 @@ Converting from jw to raw:
 <img src="https://render.githubusercontent.com/render/math?math=\rho = \frac{\psi t}{\sqrt{\frac{\kappa t}{2} + (\psi t)^2}}">
 <img src="https://render.githubusercontent.com/render/math?math=\phi= \frac{2\psi t}{\rho\sqrt{\theta}}">
 
-**American options value**
-
-Is composed of european base value and early exercise premium (EEP):
-
-<img src="https://render.githubusercontent.com/render/math?math=c(S,T) = Se^{-qT}N(d1(S,K,T))-Ke^{-rT}N(d2(S,K,T))">
-<img src="https://render.githubusercontent.com/render/math?math=p(S,T) = Ke^{-rT}N(-d2(S,K,T))-Se^{-qT}N(-d1(S,K,T))">
-
-<img src="https://render.githubusercontent.com/render/math?math=EEP_{Call}(S,T) = \int_{0}^{T} [qB_{t}e^{-q(T-t)}N(d1(S,B_{t},T-t))-rKe^{-r(T-t)}N(d2(S,B_{t},T-t))] dt">
-<img src="https://render.githubusercontent.com/render/math?math=EEP_{Put}(S,T) = \int_{0}^{T} [rKe^{-r(T-t)}N(-d2(S,B_{t},T-t))-qB_{t}e^{-q(T-t)}N(-d1(S,B_{t},T-t))] dt">
-
-<img src="https://render.githubusercontent.com/render/math?math=C(S,T) = c(S,T) %2B EEP_{Call}(S,T)">
-<img src="https://render.githubusercontent.com/render/math?math=P(S,T) = p(S,T) %2B EEP_{Put}(S,T)">
-
 **Spread function**
 
 We fit the the below functions on the raw spreads to get the three parameters:
@@ -98,9 +85,26 @@ We fit the the below functions on the raw spreads to get the three parameters:
 <img src="https://render.githubusercontent.com/render/math?math=H_{Put}(S) = H_{0} %2B H_{1}max(K_{h}-S,0)">
 
 Spread widens for deeper ITM options, we make no assumption here as to where it starts to widen, but Kh should be around ATM/F.
-**H0:**minimum spread
-**H1:**slope the spread climb
-**Kh:**strike of spread climb
+**H0:** minimum spread
+**H1:** slope the spread climb
+**Kh:** strike of spread climb
+
+**American options value**
+
+Is composed of european base value and early exercise premium (EEP):
+
+<img src="https://render.githubusercontent.com/render/math?math=C(S,T) = c(S,T) %2B EEP_{Call}(S,T)">
+<img src="https://render.githubusercontent.com/render/math?math=P(S,T) = p(S,T) %2B EEP_{Put}(S,T)">
+
+European options value:
+
+<img src="https://render.githubusercontent.com/render/math?math=c(S,T) = Se^{-qT}N(d1(S,K,T))-Ke^{-rT}N(d2(S,K,T))">
+<img src="https://render.githubusercontent.com/render/math?math=p(S,T) = Ke^{-rT}N(-d2(S,K,T))-Se^{-qT}N(-d1(S,K,T))">
+
+Where EEP is the integral of the boundary price (B) from present till the expiry (T):
+
+<img src="https://render.githubusercontent.com/render/math?math=EEP_{Call}(S,T) = \int_{0}^{T} [qB_{t}e^{-q(T-t)}N(d1(S,B_{t},T-t))-rKe^{-r(T-t)}N(d2(S,B_{t},T-t))] dt">
+<img src="https://render.githubusercontent.com/render/math?math=EEP_{Put}(S,T) = \int_{0}^{T} [rKe^{-r(T-t)}N(-d2(S,B_{t},T-t))-qB_{t}e^{-q(T-t)}N(-d1(S,B_{t},T-t))] dt">
 
 **Terminal condition**
 
