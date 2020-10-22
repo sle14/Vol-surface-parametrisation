@@ -356,12 +356,14 @@ def yld2dsc(S,T,Td,q,r):
     
 def impdivsborrows(M,S,K,T,C,P,r,D,Td):
     cout.info("Deriving borrows")
-    ImpBor = -1/(T/base)*log((C-P+K*exp(-r*(T/base))+D*exp(-r*(Td/base)))/S)
-    ImpBorDiv = -1/(T/base)*log((C-P+K*exp(-r*(T/base)))/S)
+    bor = -1/(T/base)*log((C-P+K*exp(-r*(T/base))+D*exp(-r*(Td/base)))/S)
+    yld = -1/(T/base)*log((C-P+K*exp(-r*(T/base)))/S)
     idx = np.where(M>1)[0]
-    ImpBor = np.take(ImpBor,idx,axis=0)
-    ImpBorDiv = np.take(ImpBorDiv,idx,axis=0)
-    return stats.trim_mean(ImpBor,0.01),stats.trim_mean(ImpBorDiv,0.01)
+    bor = np.take(bor,idx,axis=0)
+    bor = stats.trim_mean(bor,0.01)
+    yld = np.take(yld,idx,axis=0)
+    yld = stats.trim_mean(yld,0.01)
+    return np.nan_to_num(bor),np.nan_to_num(yld)
 
 def halfspread(x,H0,H1,Kh,R):
     return np.where(
@@ -373,10 +375,16 @@ def halfspread(x,H0,H1,Kh,R):
 def fit_spread(K,S,spread,R):
     cout.info("Fitting spreads")
     H = lambda k,h0,h1,kh: halfspread(k,h0,h1,kh,R)*2
+    std = np.std(spread)
+    if len(K) > 5 and std > 0.01:
+        mu = np.mean(spread)
+        idx = np.where(abs(spread-mu) < (2 * std))
+        spread = spread[idx]
+        K = K[idx]
     popt,pcov = curve_fit(
                           H,K,spread,
                           p0 = (min(spread),1e-6,S[0]),
-                          bounds = ((0,0,S[0]/1.5),(10,0.1,S[0]*1.5)),
+                          bounds = ((0,0,S[0]/1.5),(10,0.5,S[0]*1.5)),
                          )
     return popt[0],popt[1],popt[2]
 
@@ -396,8 +404,8 @@ def interp(k,s):
     else:
         return s
 
-def norm_weights(k,loc=0,scale=None):
-    if scale is None:
+def norm_weights(k,loc=0,scale=0):
+    if scale == 0:
         if len(k) > 15:
             scale = 0.5
         elif 16 > len(k) > 9:

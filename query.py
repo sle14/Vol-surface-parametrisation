@@ -97,7 +97,10 @@ def front_series(front_months,symbol,curr,qdate,qtime=None,opt_table=None):
     df["CumDivDays"] = np.where(df["Tenor"]<df["CumDivDays"],0,df["CumDivDays"])
     df["Div"] = np.where(df["CumDivDays"]==0,0,df["Div"])
     df = df.groupby(["Time","Tenor"]).filter(lambda x:len(x) > 2) #Drop if less than 3 occurences 
-    return df.reset_index(drop=True)
+    df = df.reset_index(drop=True)
+    x = df.groupby(["Time","Tenor"])["Strike"].count().unstack(1)
+    x = x.columns[x.isna().any()].tolist()
+    return df[~df["Tenor"].isin(x)] #Exclude tenors which are missing quotes for any particular slice
 
 def front_static(front_months,symbol,curr,qdate,spotpx=0.,lbound_money=0.4,ubound_money=1.4):
     if spotpx == 0:

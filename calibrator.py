@@ -9,7 +9,7 @@ np.seterr(divide='ignore')
 np.warnings.filterwarnings('ignore')
 base = 253
 
-def surface(symbol,qdate,qtime=None,errors=False,post=True,loc=0,scale=None):
+def surface(symbol,qdate,qtime=None,errors=False,post=True,loc=0,scale=0):
     q = f"select * from dbo.{symbol} where Date = convert(datetime,'{qdate}',103) order by Time,Tenor,Strike"
     df = query.get("Vols",q)
     if qtime is not None: df = df[df["Time"]==qtime]
@@ -25,7 +25,7 @@ def surface(symbol,qdate,qtime=None,errors=False,post=True,loc=0,scale=None):
     
     if errors == True:
         prm = utils.apply(f,6,st,["Time"],["LogStrike","TotAtmfVar","Tenor","SmtVol"],diff=True,fill=False)
-        errors = prm[-1]
+        eps = prm[-1]
         prm = np.asarray(prm[:-1]).T
     else:
         prm = utils.apply(f,5,st,["Time"],["LogStrike","TotAtmfVar","Tenor","SmtVol"],fill=False)
@@ -45,14 +45,16 @@ def surface(symbol,qdate,qtime=None,errors=False,post=True,loc=0,scale=None):
     arr = np.column_stack([arr,atm,skw,krt,phi,rho])
     df = utils.unpack(arr,qdate,False,symbol)
     
-    if post == True: 
-        query.post(df,"Params","main","replace")
+    if post == True: query.post(df,"Params","main","replace")
     
-    return df
+    if errors == False:
+        return df
+    else:
+        return df,eps
 
     
 # symbol = "JPM"
-# qdate = "16/10/2020"
+# qdate = "25/09/2020"
 # qtime = 2040
 # errors = True
-# df = surface(symbol,qdate,qtime=None,errors=False,post=False)
+# x = surface(symbol,qdate,qtime,errors=True,post=False)
