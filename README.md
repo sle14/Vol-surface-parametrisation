@@ -44,6 +44,7 @@ Then we need to minimise the below residual:
 <img src="https://render.githubusercontent.com/render/math?math=\sigma_{ssvi} = \sqrt{w(k,\theta_{t},\phi,\rho)/t}">
 <img src="https://render.githubusercontent.com/render/math?math=\epsilon = arg min(\sigma_{ssvi} - \sigma_{quotes})^2">
 
+
 **Risk Neutral Density**
 
 Explicit differentiation of BSM formula leads to:
@@ -61,6 +62,7 @@ And to get probability density:
 <img src="https://render.githubusercontent.com/render/math?math=d_{-}(k) = -\frac{k}{\sqrt{w}}\frac{\sqrt{w}}{2}">
 <img src="https://render.githubusercontent.com/render/math?math=p(k) = \frac{g(k)}{\sqrt{2\pi w(k)}}e^{-\frac{d_{-}(k)}{2}^2}">
 
+
 **Jump-wings**
 
 Jump-wings I have used are a bit different from the ones proposed by Gatheral, but the principle and the goal are the same. We want to know how will vol surface behave if we change 3 vol factors: level (σ), skew (ψ) and kurtosis (κ). 
@@ -77,6 +79,7 @@ Converting from jw to raw:
 <img src="https://render.githubusercontent.com/render/math?math=\rho = \frac{\psi t}{\sqrt{\frac{\kappa t}{2} + (\psi t)^2}}">
 <img src="https://render.githubusercontent.com/render/math?math=\phi= \frac{2\psi t}{\rho\sqrt{\theta}}">
 
+
 **Spread function**
 
 We fit the the below functions on the raw spreads to get the three parameters:
@@ -88,6 +91,7 @@ Spread widens for deeper ITM options, we make no assumption here as to where it 
 **H0:** minimum spread
 **H1:** slope the spread climb
 **Kh:** strike of spread climb
+
 
 **American options value**
 
@@ -106,25 +110,35 @@ Where EEP is the integral of the boundary price (B) from present till the expiry
 <img src="https://render.githubusercontent.com/render/math?math=EEP_{Call}(S,T) = \int_{0}^{T} [qB_{t}e^{-q(T-t)}N(d1(S,B_{t},T-t))-rKe^{-r(T-t)}N(d2(S,B_{t},T-t))] dt">
 <img src="https://render.githubusercontent.com/render/math?math=EEP_{Put}(S,T) = \int_{0}^{T} [rKe^{-r(T-t)}N(-d2(S,B_{t},T-t))-qB_{t}e^{-q(T-t)}N(-d1(S,B_{t},T-t))] dt">
 
-**Terminal condition**
+**Boundary conditions**
+
+Boundary price is the price at which returns from selling options and execising it are the same, and is subject to below conditions.
+
+Terminal condition:
 
 <img src="https://render.githubusercontent.com/render/math?math=B_{T,Call} = Kmax(1,\frac{r}{q})">
 <img src="https://render.githubusercontent.com/render/math?math=B_{T,Put} = Kmin(1,\frac{r}{q})">
 
-## Boundary conditions: high-contact and value-matching ##
+High-contact condition:
 
 <img src="https://render.githubusercontent.com/render/math?math=\lim_{S\rightarrow B_{t}} \frac{\partial P(S,K,t)}{\partial S} = -1">
 <img src="https://render.githubusercontent.com/render/math?math=\lim_{S\rightarrow B_{t}} \frac{\partial C(S,K,t)}{\partial S} = 1">
 
+Value-matching condition:
+
 <img src="https://render.githubusercontent.com/render/math?math=\lim_{S\rightarrow B_{t}} P(S,K,t) = K - B_{t}">
 <img src="https://render.githubusercontent.com/render/math?math=\lim_{S\rightarrow B_{t}} C(S,K,t) = B_{t} - K">
 
-## Boundary solution ##
+**Boundary solution**
+
+We derive boundary via backward induction where we start at expiry and move through backwards in time. As per Terminal condition we can already find out what is the boundary on the expiry date. 
 
 <img src="https://render.githubusercontent.com/render/math?math=B_{t} - K = c(B_{t},T-t) %2B EEP_{Call}(B_{t},T-t) - H(B_{t})">
 <img src="https://render.githubusercontent.com/render/math?math=K - B_{t} = p(B_{t},T-t) %2B EEP_{Put}(B_{t},T-t) - H(B_{t})">
 
-## Trapezoid rule ##
+Note that we deduct half-spread from the above to adjust the difference in liquidity between the spot and option, in addition to the fact that spread widens as options gets deeper ITM which is exactly where the boundary is located.
+
+We use Trapezoid rule to find the quadrature for the EEP component and final value as we integrate all the boundaries till the expiry:
 
 <img src="https://render.githubusercontent.com/render/math?math=\int_{a}^{b}f(x)dx \approx \Delta x[\frac{(f(x_{a}) %2B f(x_{b}))}{2} %2B \sum_{n=1}^{N-1}f(x_{n})]">
 
