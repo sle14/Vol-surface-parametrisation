@@ -1,6 +1,6 @@
 # Vol Surface Parametrisation
 
-Ngrok link to dashboard: https://vol.ngrok.io/
+Ngrok link to the dashboard: https://vol.ngrok.io/
 
 ![Example](https://github.com/sle14/Vol-surface-parametrisation/blob/master/examples/ALL.PNG?raw=true)
 
