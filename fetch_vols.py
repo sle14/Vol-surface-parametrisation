@@ -12,10 +12,8 @@ np.seterr(divide='ignore')
 np.warnings.filterwarnings('ignore')
 base = 253
 
-# qdate = "20/10/2020"
-# qtime = "14:40"
-
-symbol = "AAL"
+# qdate = "21/10/2020"
+qtime = "20:40"
 curr = "USD"
 
 qdate = input("Select trade date in dd/mm/yyyy format: ")
@@ -82,8 +80,8 @@ try:
             
             cvol = utils.apply(pricer.interp,1,st,["Time","Tenor"],[lst,cvol],asarray=True,fill=True)
             pvol = utils.apply(pricer.interp,1,st,["Time","Tenor"],[lst,pvol],asarray=True,fill=True)
-            
-            rvol = (cvol + pvol)/2
+              
+            rvol = [(i+j)/2 if np.isnan(i)==False and np.isnan(j)==False else j if np.isnan(j)==False else i if np.isnan(i)==False else np.nan for i,j in zip(cvol,pvol)]
             svol = utils.apply(pricer.interp,1,st,["Time","Tenor"],[lst,rvol],asarray=True,fill=True)
             
             var = utils.apply(pricer.totatmfvar,1,st,["Time","Tenor"],[st["Tenor"],lst,svol],asarray=True,fill=True)
