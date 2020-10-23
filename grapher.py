@@ -32,6 +32,9 @@ class theme:
         <style>.widget-tab-contents
                 |# color:{self.white} !important; background-color:{self.darkgray} !important; border-color:{self.lightgray} !important; #|
         </style>
+        <style>.output_area pre
+                |# color:{self.orange} !important; #|
+        </style>        
         <style>.widget-text input[type="text"] 
                 |# color:{self.white}; background-color:{self.gray}; border-color:{self.gray}; #|
         </style>
