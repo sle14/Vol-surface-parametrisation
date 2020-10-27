@@ -48,8 +48,10 @@ def opt_stack(front_months,symbol,curr,qdate,qtime=None,opt_table=None):
         select top 1 exDate as exDate,Symbol,Amount from (select * from Static.dbo.divs 
 		where exDate > @qdate and Symbol = @symbol) as sd)
     select 
+        opt_grid.Date,
         opt_grid.Time,
         opt_grid.Expiry,
+        dense_rank() over (order by opt_grid.Expiry)-1 as [Group],
         (datediff(dd,@qdate,Expiry) + 1) 
     - (datediff(wk,@qdate,Expiry) * 2)
     - (case when datename(dw,@qdate) = 'Sunday' then 1 else 0 end) 

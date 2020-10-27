@@ -65,9 +65,10 @@ class watchdog:
         self.t.cancel()
 #------------------------------------------------------------------------------------
 cols_dct = {
-            "Expiry":       int,
             "Date":         int,
             "Time":         int,
+            "Expiry":       int,
+            "Group":        int,
             "Tenor":        int,
             "Strike":       float,
             
@@ -140,15 +141,16 @@ prm_cols = [
 def pack(df):
     cols = df.columns.tolist()
     dtype = [(col,cols_dct[col]) for col in cols]
-    if "Date" in cols: df["Date"] = df["Date"].astype(np.int64) // 10**9
-    if "Expiry" in cols: df["Expiry"] = df["Expiry"].astype(np.int64) // 10**9
+    if "Date" in cols: df["Date"] = to_unix(df["Date"].to_numpy())
+    if "Expiry" in cols: df["Expiry"] = to_unix(df["Expiry"].to_numpy())
     return np.array(df.to_records(index=False),dtype=dtype)
 
-def unpack(arr,date,raw=True,symbol=None):
+def unpack(arr,date=None,raw=True,symbol=None):
     if raw == True:
-        df = pd.DataFrame(arr,columns=list(cols_dct.keys())[2:])
-        df["Date"] = pd.to_datetime(date,format="%d/%m/%Y")
-        return df.reindex(columns=["Date"]+df.columns[:-1].tolist())
+        df = pd.DataFrame(arr,columns=list(cols_dct.keys()))
+        df["Date"] = to_date(df["Date"].to_numpy())
+        df["Expiry"] = to_date(df["Expiry"].to_numpy())
+        return df
     else:
         df = pd.DataFrame(arr,columns=prm_cols[2:])
         df["DAT"] = pd.to_datetime(date,format="%d/%m/%Y")
