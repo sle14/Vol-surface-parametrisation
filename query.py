@@ -177,7 +177,7 @@ def drop_dupes(on:list,database,table_name):
     post(dfc,database,table_name,"replace")
     print(f"Dropped {dropped_rows} dupes from {database}.dbo.{table_name}")
 
-def drop_strikes(arr,num=20):
+def drop_strikes(arr,num):
     x = arr.copy()
     while len(x) > num:
         x[::2] = 0
@@ -191,7 +191,7 @@ def filter_static(df,num):
     K = utils.apply(f,1,st,["Expiry"],["Strike"])
     return K[~np.isnan(K)]
 
-def opt_remainder(front_months,symbol,curr,qdate,num=20):
+def opt_remainder(front_months,symbol,curr,qdate,num=14):
     df = front_static(front_months,symbol,curr,qdate)
     if df.empty:
         print(f"{time.strftime('%H:%M:%S')} > Nothing to return from static, is spot data populated?")
