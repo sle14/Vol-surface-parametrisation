@@ -32,7 +32,7 @@ def opt_stack(front_months,symbol,curr,qdate,qtime=None,opt_table=None):
         sum([CAsk]) as 'CallAsk',sum([PAsk]) as 'PutAsk'
         from (select Symbol,[Date],[Time],Expiry,Strike,[Type],Bid,Ask,
 			[Type]+'Bid' as TypeBid,[Type]+'Ask' as TypeAsk
-        	from dbo.{symbol} where [Date] = @qdate and Expiry <= @maxqdate 
+        	from dbo.[{symbol}] where [Date] = @qdate and Expiry <= @maxqdate 
         	and Bid > 0 and Ask > 0 and Lotsize = 100) as sq
         pivot (sum(Bid) for TypeBid in ([CBid],[PBid])) as pvt_bid
         pivot (sum(Ask) for TypeAsk in ([CAsk],[PAsk])) as pvt_ask
@@ -96,7 +96,7 @@ def vols(cols,order_by,symbol,qdate=None,qtime=None,distinct=False):
         
     q = "select"
     if distinct == True: q += " distinct"
-    q += f" {','.join(str(i) for i in cols)} from dbo.{symbol}"
+    q += f" {','.join(str(i) for i in cols)} from dbo.[{symbol}]"
     
     if qdate is not None or qtime is not None: 
         q += " where "
@@ -171,7 +171,7 @@ def post(df,database,table_name,ifexists):
     cout.info(f"Posted grid to {database} DB")
 
 def drop_dupes(on:list,database,table_name):
-    df = get(database,f"select * from dbo.{table_name}")
+    df = get(database,f"select * from dbo.[{table_name}]")
     dfc = df.drop_duplicates(on)
     dropped_rows = int(len(df.index) - len(dfc.index))
     post(dfc,database,table_name,"replace")
@@ -198,7 +198,7 @@ def opt_remainder(front_months,symbol,curr,qdate,num=20):
         return df
     K = filter_static(df,num) #Drop strikes until halving criteria per expiry is satisfied
     df = df[df["Strike"].isin(K)].reset_index(drop=True).set_index(["Expiry","Type","Strike"])
-    q = f"select distinct Expiry,Type,Strike from dbo.{symbol} where Date = convert(datetime,'{qdate}',103)"
+    q = f"select distinct Expiry,Type,Strike from dbo.[{symbol}] where Date = convert(datetime,'{qdate}',103)"
     try:
         opt = get("Quotes",q).set_index(["Expiry","Type","Strike"])
         opt["Exists"] = 1.

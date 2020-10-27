@@ -4,13 +4,13 @@ import utils
 
 cout = utils.log(__file__,__name__)
 
-# qdate = "20/10/2020"
+# qdate = "26/10/2020"
 
 curr = "USD"
 window = "1 D"
 qdate = input("Select trade date in dd/mm/yyyy format: ")
 
-q = "select distinct Symbol from dbo.chains where Symbol != 'FP'"
+q = "select distinct Symbol from dbo.chains"
 symbols = query.get("Static",q)
 symbols = symbols["Symbol"].sort_values().to_list()
 
@@ -38,3 +38,4 @@ try:
 except:
     cout.error("Error")
     
+# query.drop_dupes(["Date","Time","Symbol","Expiry","Strike","Type","Lotsize","Currency"],"Quotes","AMD")
