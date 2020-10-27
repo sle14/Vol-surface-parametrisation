@@ -67,6 +67,24 @@ class theme:
 
 c = theme()
 #------------------------------------------------------------------------------
+vol_cols = [
+            "Tenor",
+            "Strike",
+            "LogStrike",
+            "Moneyness",
+            "RawVol",
+            "SmtVol",
+            "CallBid",
+            "CallAsk",
+            "CallMid",
+            "CallSpread",
+            "CallEEP",
+            "PutBid",
+            "PutAsk",
+            "PutMid",
+            "PutSpread",
+            "PutEEP"
+           ]
 fct_cols = [       #Independent vars:
             "TNR", #Tenor
             "CDD", #Cum-div days
@@ -792,10 +810,17 @@ class LoadData:
 
     def start(self,loc=0,scale=0): #Return here instead of post& get -> not efficient
         prg_load.val += 0.1
+        
         params,errors = calibrator.surface(self.symbol,self.qdate,self.qtime,errors=True,post=False,loc=loc,scale=scale)
         self.errors = errors
         prg_load.val += 0.1
+        
         k = np.hstack([-np.linspace(1,0,101)[:-1],np.linspace(0,0.7,71)])
-        vols = query.vols(self.symbol,"USD",self.qdate,self.qtime)
+        vols = query.vols(vol_cols,self.symbol,self.qdate,self.qtime)
+        print(vols)
+        if vols.empty():
+            print("No data returned for the selected date")
+            prg_load.val = 0
+            return
         prg_load.val += 0.1
         return ChainStruct(params,vols,k)

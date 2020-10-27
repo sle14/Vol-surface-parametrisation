@@ -49,6 +49,7 @@ def opt_stack(front_months,symbol,curr,qdate,qtime=None,opt_table=None):
 		where exDate > @qdate and Symbol = @symbol) as sd)
     select 
         opt_grid.Time,
+        opt_grid.Expiry,
         (datediff(dd,@qdate,Expiry) + 1) 
     - (datediff(wk,@qdate,Expiry) * 2)
     - (case when datename(dw,@qdate) = 'Sunday' then 1 else 0 end) 
@@ -85,11 +86,25 @@ def opt_stack(front_months,symbol,curr,qdate,qtime=None,opt_table=None):
     query += " order by Time,Tenor,Strike"
     return query
 
-def vols(symbol,curr,qdate,qtime):
-    volsq = f"""select Tenor,Strike,LogStrike,Moneyness,RawVol,SmtVol,CallBid,CallAsk,CallMid,
-        CallSpread,CallEEP,PutBid,PutAsk,PutMid,PutSpread,PutEEP from dbo.{symbol} where
-        Date = convert(datetime,'{qdate}',103) and Time = {qtime} order by Tenor,Strike"""
-    return get("Vols",volsq).set_index("Tenor")
+def vols(cols,symbol,qdate=None,qtime=None):
+    assert type(cols) is list, "cols requested must be in list format" 
+    assert type(qdate) is str, "qdate has to be string in dd/mm/yyyy format" 
+    assert type(qtime) is str, "qtime has to be string in hh:mm format" 
+    
+    cols = ','.join(str(i) for i in cols)
+    q = f"select {cols} from dbo.{symbol}"
+    if qdate is not None or qtime is not None: 
+        q += " where "
+    if qdate is not None and qtime is not None: 
+        q += f" Date = convert(datetime,'{qdate}',103) and Time = {int(qtime.replace(':',''))}"
+    elif qdate is not None:
+        q += f" Date = convert(datetime,'{qdate}',103)"
+    elif qtime is not None:
+        q += f" Time = {int(qtime.replace(':',''))}"
+    q += " order by Tenor,Strike"
+    df = get("Vols",q)
+    if df.empty: print(f"Returned empty df on vol query with args: {cols}, {symbol}, {qdate}, {qtime}")
+    return df
 
 def front_series(front_months,symbol,curr,qdate,qtime=None,opt_table=None):
     df = get("Quotes",opt_stack(front_months,symbol,curr,qdate,qtime,opt_table))

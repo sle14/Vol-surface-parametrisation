@@ -226,6 +226,12 @@ def select(st,cols=()):
     return arr
 
 #------------------------------------------------------------------------------------
+def to_unix(arr):
+    return pd.to_datetime(arr).astype(int) / 10**9
+
+def to_date(arr):
+    return pd.to_datetime(arr,unit="s")
+
 def intersect2d(X,Y):
     X = np.tile(X[:,:,None], (1, 1, Y.shape[0]) )
     Y = np.swapaxes(Y[:,:,None], 0, 2)

@@ -10,9 +10,7 @@ np.warnings.filterwarnings('ignore')
 base = 253
 
 def surface(symbol,qdate,qtime=None,errors=False,post=True,loc=0,scale=0):
-    q = f"select * from dbo.{symbol} where Date = convert(datetime,'{qdate}',103) order by Time,Tenor,Strike"
-    df = query.get("Vols",q)
-    if qtime is not None: df = df[df["Time"]==qtime]
+    df = query.vols(["*"],symbol,qdate,qtime)
     st = utils.pack(df)
     del df;
     
@@ -51,10 +49,9 @@ def surface(symbol,qdate,qtime=None,errors=False,post=True,loc=0,scale=0):
         return df
     else:
         return df,eps
-
     
+#----------------------------------------------------------------------------------
 # symbol = "JPM"
 # qdate = "25/09/2020"
-# qtime = 2040
-# errors = True
+# qtime = "20:40"
 # x = surface(symbol,qdate,qtime,errors=True,post=False)
