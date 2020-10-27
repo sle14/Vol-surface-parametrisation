@@ -816,7 +816,7 @@ class LoadData:
         prg_load.val += 0.1
         
         k = np.hstack([-np.linspace(1,0,101)[:-1],np.linspace(0,0.7,71)])
-        vols = query.vols(vol_cols,self.symbol,self.qdate,self.qtime).set_index("Tenor")
+        vols = query.vols(vol_cols,["Tenor","Strike"],self.symbol,self.qdate,self.qtime).set_index("Tenor")
         if vols.empty:
             print("No data returned for the selected date")
             prg_load.val = 0

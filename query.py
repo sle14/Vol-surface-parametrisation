@@ -86,15 +86,15 @@ def opt_stack(front_months,symbol,curr,qdate,qtime=None,opt_table=None):
     query += " order by Time,Tenor,Strike"
     return query
 
-def vols(cols,symbol,qdate=None,qtime=None,distinct=False):
+def vols(cols,order_by,symbol,qdate=None,qtime=None,distinct=False):
     assert type(cols) is list, "cols requested must be in list format"
+    assert type(order_by) is list, "order_by requested must be in list format"
     if qdate is not None: assert type(qdate) is str, "qdate has to be string in dd/mm/yyyy format" 
     if qtime is not None: assert type(qtime) is str, "qtime has to be string in hh:mm format" 
         
     q = "select"
-    cols = ','.join(str(i) for i in cols)
     if distinct == True: q += " distinct"
-    q += f" {cols} from dbo.{symbol}"
+    q += f" {','.join(str(i) for i in cols)} from dbo.{symbol}"
     
     if qdate is not None or qtime is not None: 
         q += " where "
@@ -104,7 +104,7 @@ def vols(cols,symbol,qdate=None,qtime=None,distinct=False):
         q += f" Date = convert(datetime,'{qdate}',103)"
     elif qtime is not None:
         q += f" Time = {int(qtime.replace(':',''))}"
-    q += " order by Tenor,Strike"
+    q += f" order by {','.join(str(i) for i in order_by)}"
     
     df = get("Vols",q)
     if df.empty: print(f"Returned empty df on vol query with args: {cols}, {symbol}, {qdate}, {qtime}")

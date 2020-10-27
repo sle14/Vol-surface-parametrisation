@@ -10,7 +10,7 @@ np.warnings.filterwarnings('ignore')
 base = 253
 
 def surface(symbol,qdate,qtime=None,errors=False,post=True,loc=0,scale=0):
-    df = query.vols(["*"],symbol,qdate,qtime)
+    df = query.vols(["*"],["Date","Time","Tenor","Strike"],symbol,qdate,qtime)
     st = utils.pack(df)
     del df;
     
