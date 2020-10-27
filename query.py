@@ -90,12 +90,12 @@ def vols(cols,symbol,qdate=None,qtime=None,distinct=False):
     assert type(cols) is list, "cols requested must be in list format"
     if qdate is not None: assert type(qdate) is str, "qdate has to be string in dd/mm/yyyy format" 
     if qtime is not None: assert type(qtime) is str, "qtime has to be string in hh:mm format" 
-    cols = ','.join(str(i) for i in cols)
-    
+        
     q = "select"
-    if distinct == True: 
-        q += " distinct"
+    cols = ','.join(str(i) for i in cols)
+    if distinct == True: q += " distinct"
     q += f" {cols} from dbo.{symbol}"
+    
     if qdate is not None or qtime is not None: 
         q += " where "
     if qdate is not None and qtime is not None: 
@@ -105,6 +105,7 @@ def vols(cols,symbol,qdate=None,qtime=None,distinct=False):
     elif qtime is not None:
         q += f" Time = {int(qtime.replace(':',''))}"
     q += " order by Tenor,Strike"
+    
     df = get("Vols",q)
     if df.empty: print(f"Returned empty df on vol query with args: {cols}, {symbol}, {qdate}, {qtime}")
     return df
