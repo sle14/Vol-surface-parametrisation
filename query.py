@@ -41,7 +41,7 @@ def opt_stack(front_months,symbol,curr,qdate,qtime=None,opt_table=None):
         select *,(CallBid+CallAsk)/2 as CallMid,(PutBid+PutAsk)/2 as PutMid from type_stack
         where CallBid is not null and CallAsk is not null and PutBid is not null and PutBid is not null),
     rates_grid as (
-        select [Date],Rate from (select * from Static.dbo.rates where Tenor = '6M' and Currency = @curr) as sq),
+        select [Date],Rate from (select * from Static.dbo.rates where Tenor = '3M' and Currency = @curr) as sq),
     spot_grid as (
 		select Symbol,[Date],[Time],Bid,Ask from dbo.Spot),
     divs_grid as (
@@ -113,7 +113,8 @@ def vols(cols,order_by,symbol,qdate=None,qtime=None,distinct=False):
     return df
 
 def front_series(front_months,symbol,curr,qdate,qtime=None,opt_table=None):
-    df = get("Quotes",opt_stack(front_months,symbol,curr,qdate,qtime,opt_table))
+    q = opt_stack(front_months,symbol,curr,qdate,qtime,opt_table)
+    df = get("Quotes",q)
     if df.empty: print("Nothing returned on quotes, are rates populated?")
     df["CumDivDays"] = np.where(df["Tenor"]<df["CumDivDays"],0,df["CumDivDays"])
     df["Div"] = np.where(df["CumDivDays"]==0,0,df["Div"])

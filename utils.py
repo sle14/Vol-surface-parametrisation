@@ -150,6 +150,8 @@ def unpack(arr,date=None,raw=True,symbol=None):
         df = pd.DataFrame(arr,columns=list(cols_dct.keys()))
         df["Date"] = to_date(df["Date"].to_numpy())
         df["Expiry"] = to_date(df["Expiry"].to_numpy())
+        for x in ["Time","Group","Tenor","CumDivDays"]:
+            df[x] = df[x].astype(int)
         return df
     else:
         df = pd.DataFrame(arr,columns=prm_cols[2:])

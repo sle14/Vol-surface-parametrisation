@@ -18,10 +18,12 @@ class Wrapper(EWrapper):
         self.dic = {1:"BID",2:"ASK"}
         self.database = database
         self.table = table
+        
         self.c = Contract()
         self.c.symbol = symbol
         self.c.currency = currency
         self.c.exchange = "SMART"
+        
         if expiry != None: 
             self.c.secType = "OPT"
             if type(expiry) == str: expiry = pd.to_datetime(expiry,format="%d/%m/%Y")
@@ -30,7 +32,11 @@ class Wrapper(EWrapper):
             self.c.multiplier = 100.
             self.c.right = right
         else:
-            self.c.secType = "STK"
+            if symbol != "OEX":
+                self.c.secType = "STK"
+            else:
+                self.c.secType = "IDX"
+                
         self.no_ask = False
         self.no_bid = False
         self.no_dat = False

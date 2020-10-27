@@ -182,7 +182,7 @@ def symbol_universe():
     return query.get("Static","select distinct Symbol from dbo.chains where Symbol != 'FP' order by Symbol")["Symbol"].tolist()
 
 def trading_times(symbol):
-    tms = query.get("Vols",f"select distinct Time from dbo.{symbol} where Date = convert(datetime,'25/09/2020',103)")["Time"].tolist()
+    tms = query.get("Vols",f"select distinct Time from dbo.{symbol} where Date = convert(datetime,'26/10/2020',103)")["Time"].tolist()
     return [str(x)[:2]+":"+str(x)[2:]+" UTC" for x in list(sorted(tms))]
 
 class Progress(tl.HasTraits):

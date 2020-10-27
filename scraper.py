@@ -5,14 +5,19 @@ import query
 
 def links(currency):
     if currency == "EUR":
-        return {"12M":"https://www.global-rates.com/en/interest-rates/euribor/euribor-interest-12-months.aspx",
+        return {
+                "12M":"https://www.global-rates.com/en/interest-rates/euribor/euribor-interest-12-months.aspx",
                 "6M":"https://www.global-rates.com/en/interest-rates/euribor/euribor-interest-6-months.aspx",
                 "3M":"https://www.global-rates.com/en/interest-rates/euribor/euribor-interest-3-months.aspx",
                 "1M":"https://www.global-rates.com/en/interest-rates/euribor/euribor-interest-1-month.aspx",
                 "1W":"https://www.global-rates.com/en/interest-rates/euribor/euribor-interest-1-week.aspx",
-                "ON":"https://www.global-rates.com/en/interest-rates/eonia/eonia.aspx"}
+                "ON":"https://www.global-rates.com/en/interest-rates/eonia/eonia.aspx"
+               }
     elif currency == "USD":
-        return {"6M":"https://www.global-rates.com/en/interest-rates/libor/american-dollar/usd-libor-interest-rate-6-months.aspx"}
+        return {
+                "6M":"https://www.global-rates.com/en/interest-rates/libor/american-dollar/usd-libor-interest-rate-6-months.aspx",
+                "3M":"https://www.global-rates.com/en/interest-rates/libor/american-dollar/usd-libor-interest-rate-3-months.aspx",
+               }
 
 def parse_dates(df,cols:list,sort_col,dformat):
     for i in cols: 
@@ -44,7 +49,7 @@ def rates(currency,tenor):
     query.post(df,"Static","rates","replace")
     print("Posted")
     
-rates("USD","6M")
+rates("USD","3M")
 
 
 

@@ -12,8 +12,8 @@ np.seterr(divide='ignore')
 np.warnings.filterwarnings('ignore')
 base = 253
 
-qdate = "21/09/2020"
-qtime = "20:40"
+qdate = "26/10/2020"
+qtime = "19:40"
 curr = "USD"
 
 # qdate = input("Select trade date in dd/mm/yyyy format: ")
@@ -23,34 +23,34 @@ symbols = query.get("Static",q)
 symbols = symbols["Symbol"].sort_values().to_list()
 
 # try:
-for symbol in ["AAL"]:
+for symbol in ["MPC","MS","MSFT","MU","NIO",
+               "NKLA","ORCL","OXY","PBR","PFE","ROKU","SNAP","T","TSLA","UAL","UBER","VALE","WFC","WORK","X","XOM"]:
     while True:
-        df = query.front_series(3,symbol,curr,qdate,qtime)
-        #add index col
+        df = query.front_series(3,symbol,curr,qdate)
 
-        # #Check quotes are populated
-        # remainder = query.opt_remainder(3,symbol,curr,qdate)
-        # if remainder.empty == False: 
-        #     left = len(remainder)
-        #     cout.info(f"{symbol} - {left} quotes missing, waiting for fetch to populate") 
-        #     sleep(60)
-        #     continue
+        #Check quotes are populated
+        remainder = query.opt_remainder(3,symbol,curr,qdate)
+        if remainder.empty == False: 
+            left = len(remainder)
+            cout.info(f"{symbol} - {left} quotes missing, waiting for fetch to populate") 
+            sleep(60)
+            continue
         
-        # #Check if table exist and vols are populated
-        # tables = query.get("Vols",f"select count(*) from information_schema.tables where table_name = '{symbol}'").iloc[0,0]
-        # if tables == 1:
-        #     q = f"select distinct Time,Tenor,Strike from dbo.{symbol} where Date = convert(datetime,'{qdate}',103) order by Tenor,Strike"
-        #     vols = query.get("Vols",q)
-        #     quotes = df[["Time","Tenor","Strike"]].drop_duplicates()
-        #     if len(vols) == len(quotes):
-        #         cout.info(f"{symbol} - vols already populated, moving on to next") 
-        #         break
-        #     elif len(vols) > 0:
-        #         cout.warn(f"{symbol} - vols are partially populated, cleaning up")
-        #         q = f"delete from dbo.{symbol} where Date = convert(datetime,'{qdate}',103)"
-        #         query.execute("Vols",q)
-        #     else:
-        #         cout.info(f"{symbol} - vols are empty for the selected date & symbol") 
+        #Check if table exist and vols are populated
+        tables = query.get("Vols",f"select count(*) from information_schema.tables where table_name = '{symbol}'").iloc[0,0]
+        if tables == 1:
+            q = f"select distinct Time,Tenor,Strike from dbo.{symbol} where Date = convert(datetime,'{qdate}',103) order by Tenor,Strike"
+            vols = query.get("Vols",q)
+            quotes = df[["Time","Tenor","Strike"]].drop_duplicates()
+            if len(vols) == len(quotes):
+                cout.info(f"{symbol} - vols already populated, moving on to next") 
+                break
+            elif len(vols) > 0:
+                cout.warn(f"{symbol} - vols are partially populated, cleaning up")
+                q = f"delete from dbo.{symbol} where Date = convert(datetime,'{qdate}',103)"
+                query.execute("Vols",q)
+            else:
+                cout.info(f"{symbol} - vols are empty for the selected date & symbol") 
         
         #Main
         cout.info(f"{symbol} - initing vol fetch")
@@ -90,7 +90,7 @@ for symbol in ["AAL"]:
         ar = np.column_stack([unstruct(st),yld,chs,phs,fwd,lst,cvol,ceep,pvol,peep,rvol,svol,var])
         df = utils.unpack(ar)
         
-        # query.post(df,"Vols",symbol,"append")
+        query.post(df,"Vols",symbol,"append")
         
         elapsed = round((time.time()-start_time)/60,3)
         cout.info(f"{symbol} - elapsed {elapsed} mins")
