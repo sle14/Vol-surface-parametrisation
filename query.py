@@ -86,13 +86,16 @@ def opt_stack(front_months,symbol,curr,qdate,qtime=None,opt_table=None):
     query += " order by Time,Tenor,Strike"
     return query
 
-def vols(cols,symbol,qdate=None,qtime=None):
-    assert type(cols) is list, "cols requested must be in list format" 
-    assert type(qdate) is str, "qdate has to be string in dd/mm/yyyy format" 
-    assert type(qtime) is str, "qtime has to be string in hh:mm format" 
-    
+def vols(cols,symbol,qdate=None,qtime=None,distinct=False):
+    assert type(cols) is list, "cols requested must be in list format"
+    if qdate is not None: assert type(qdate) is str, "qdate has to be string in dd/mm/yyyy format" 
+    if qtime is not None: assert type(qtime) is str, "qtime has to be string in hh:mm format" 
     cols = ','.join(str(i) for i in cols)
-    q = f"select {cols} from dbo.{symbol}"
+    
+    q = "select"
+    if distinct == True: 
+        q += " distinct"
+    q += f" {cols} from dbo.{symbol}"
     if qdate is not None or qtime is not None: 
         q += " where "
     if qdate is not None and qtime is not None: 
