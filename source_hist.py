@@ -13,9 +13,8 @@ class Wrapper(EWrapper):
     def __init__(self,qdate,symbol,currency,database,table,expiry=None,strike=None,right=None,window=None):
         self.Qdate = pd.to_datetime(qdate,format="%d/%m/%Y")
         self.qdate = self.Qdate.strftime("%Y%m%d")+" 23:00:00"
-        self.bid = pd.DataFrame(columns=["DateTime","Bid"])
-        self.ask = pd.DataFrame(columns=["DateTime","Ask"])
-        self.dic = {1:"BID",2:"ASK"}
+        self.df = pd.DataFrame(columns=["DateTime","Bid","Ask"])
+        self.dic = {1:"BID_ASK"}
         self.database = database
         self.table = table
         
@@ -24,7 +23,6 @@ class Wrapper(EWrapper):
         self.c.currency = currency
             
         if symbol != "OEX":
-
             self.c.exchange = "SMART"
             if expiry != None: 
                 self.c.secType = "OPT"
@@ -55,8 +53,6 @@ class Wrapper(EWrapper):
                 self.c.secType = 'IND'
                 self.dic = {1:"TRADES",2:"TRADES"}
              
-        self.no_ask = False
-        self.no_bid = False
         self.no_dat = False
         self.window = "1 D" if window == None else window
         self.tmr = utils.watchdog(90,self.timeout)       
@@ -66,19 +62,11 @@ class Wrapper(EWrapper):
         self.request(orderId)
 
     def historicalData(self,reqId:int,bar:BarData):
-        if reqId == 1: 
-            self.bid.loc[len(self.bid)] = [bar.date,bar.close]
-            self.tmr.reset(90)
-        if reqId == 2: 
-            self.ask.loc[len(self.ask)] = [bar.date,bar.close]
-            self.tmr.reset(90)
+        self.df.loc[len(self.df)] = [bar.date,bar.open,bar.close]
+        self.tmr.reset(90)
 
     def historicalDataEnd(self,reqId:int,start:str,end:str):
-        if reqId + 1 < 3: 
-            reqId += 1
-            self.request(reqId)
-        else:
-            self.end_of_queue()
+        self.end_of_queue()
      
     def check_dates(self,df):
         if len(df[df["Date"]==self.Qdate]) == len(df):
@@ -120,9 +108,9 @@ class Wrapper(EWrapper):
             if self.c.secType == "STK":
                 df = self.check_spot(df)
                 if df.empty: return
-            # query.post(df,self.database,self.table,"append")
+            query.post(df,self.database,self.table,"append")
             row = list(df[["Symbol","Bid","Ask"]].loc[0])
-            cout.info(f"{self.c.secType}, {row[0]}, {row[1]}, {row[2]}, {self.no_bid}, {self.no_ask}, {self.no_dat}")
+            cout.info(f"{self.c.secType}, {row[0]}, {row[1]}, {row[2]}, {self.no_dat}")
         elif self.c.secType == "OPT":
             df = self.dummy()
             query.post(df,self.database,self.table,"append")
@@ -135,17 +123,7 @@ class Wrapper(EWrapper):
         app.disconnect()
         
     def combine_data(self):
-        if self.no_bid == False and self.no_ask == False:
-            df = self.bid.set_index("DateTime")
-            df = df.join(self.ask.set_index("DateTime"))
-        elif self.no_bid == True and self.no_ask == False:
-            df = self.ask.set_index("DateTime")
-            df["Bid"] = 0
-        elif self.no_ask == True and self.no_bid == False:
-            df = self.bid.set_index("DateTime")
-            df["Ask"] = 0
-        else:
-            return pd.DataFrame()
+        df = self.df.set_index("DateTime")
         df.index = df.index.str.split("  ",expand=True)
         df = df.reset_index()
         df.columns = ["Date","Time","Bid","Ask"]
