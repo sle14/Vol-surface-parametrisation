@@ -22,27 +22,39 @@ class Wrapper(EWrapper):
         self.c = Contract()
         self.c.symbol = symbol
         self.c.currency = currency
-        self.c.exchange = "SMART"
-        
-        if expiry != None: 
-            self.c.secType = "OPT"
-            if type(expiry) == str: expiry = pd.to_datetime(expiry,format="%d/%m/%Y")
-            self.c.lastTradeDateOrContractMonth = expiry.strftime("%Y%m%d")
-            self.c.strike = float(strike)
-            self.c.multiplier = 100.
-            self.c.right = right
-        else:
-            if symbol != "OEX":
-                self.c.secType = "STK"
-            else:
-                self.c.secType = "IDX"
-             
-        if symbol == "CSCO":
-            if self.c.secType == "STK": 
-                self.c.primaryExchange = "NASDAQ"        
-            else:
-                self.c.primaryExchange = "CBOE"
             
+        if symbol != "OEX":
+
+            self.c.exchange = "SMART"
+            if expiry != None: 
+                self.c.secType = "OPT"
+                if type(expiry) == str: expiry = pd.to_datetime(expiry,format="%d/%m/%Y")
+                self.c.lastTradeDateOrContractMonth = expiry.strftime("%Y%m%d")
+                self.c.strike = float(strike)
+                self.c.multiplier = 100.
+                self.c.right = right
+            else:
+                self.c.secType = "STK"
+                       
+            if symbol == "CSCO":
+                if self.c.secType == "STK": 
+                    self.c.primaryExchange = "NASDAQ"        
+                else:
+                    self.c.primaryExchange = "CBOE"
+                    
+        else:
+            self.c.exchange = 'CBOE'
+            if expiry != None:
+                self.c.secType = "OPT"
+                if type(expiry) == str: expiry = pd.to_datetime(expiry,format="%d/%m/%Y")
+                self.c.lastTradeDateOrContractMonth = expiry.strftime("%Y%m%d")
+                self.c.strike = float(strike)
+                self.c.multiplier = 100.
+                self.c.right = right                 
+            else:
+                self.c.secType = 'IND'
+                self.dic = {1:"TRADES",2:"TRADES"}
+             
         self.no_ask = False
         self.no_bid = False
         self.no_dat = False
@@ -108,7 +120,7 @@ class Wrapper(EWrapper):
             if self.c.secType == "STK":
                 df = self.check_spot(df)
                 if df.empty: return
-            query.post(df,self.database,self.table,"append")
+            # query.post(df,self.database,self.table,"append")
             row = list(df[["Symbol","Bid","Ask"]].loc[0])
             cout.info(f"{self.c.secType}, {row[0]}, {row[1]}, {row[2]}, {self.no_bid}, {self.no_ask}, {self.no_dat}")
         elif self.c.secType == "OPT":

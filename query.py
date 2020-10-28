@@ -163,7 +163,7 @@ def get(database,query):
     cout.info(f"Get grid from {database} DB")
     return pd.read_sql(query,con=engine)
 
-def post(df,database,table_name,ifexists):      
+def post(df,database,table_name,ifexists):     
     database=database
     eng = f"mssql+pyodbc://{user}@{server}/{database}?driver={driver}"
     engine = sqlalchemy.create_engine(eng)
@@ -191,7 +191,7 @@ def filter_static(df,num):
     K = utils.apply(f,1,st,["Expiry"],["Strike"])
     return K[~np.isnan(K)]
 
-def opt_remainder(front_months,symbol,curr,qdate,num=14):
+def opt_remainder(front_months,symbol,curr,qdate,num=10):
     df = front_static(front_months,symbol,curr,qdate)
     if df.empty:
         print(f"{time.strftime('%H:%M:%S')} > Nothing to return from static, is spot data populated?")
