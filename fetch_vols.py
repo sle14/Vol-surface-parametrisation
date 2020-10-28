@@ -23,7 +23,7 @@ symbols = query.get("Static",q)
 symbols = symbols["Symbol"].sort_values().to_list()
 
 # try:
-for symbol in ["TXN"]:
+for symbol in ["NKE"]:
     while True:
         df = query.front_series(3,symbol,curr,qdate)
 
@@ -78,10 +78,12 @@ for symbol in ["TXN"]:
         args = utils.select(st,["PutMid","SpotMid","Strike","Tenor","Rate"])
         pvol,peep = f(*args)
         
-        cvol = utils.apply(pricer.interp,1,st,["Time","Tenor"],[lst,cvol],asarray=True,fill=True)
-        pvol = utils.apply(pricer.interp,1,st,["Time","Tenor"],[lst,pvol],asarray=True,fill=True)
+        # cvol = utils.apply(pricer.interp,1,st,["Time","Tenor"],[lst,cvol],asarray=True,fill=True)
+        # pvol = utils.apply(pricer.interp,1,st,["Time","Tenor"],[lst,pvol],asarray=True,fill=True)
           
-        rvol = [(i+j)/2 if np.isnan(i)==False and np.isnan(j)==False else j if np.isnan(j)==False else i if np.isnan(i)==False else np.nan for i,j in zip(cvol,pvol)]
+        # rvol = [(i+j)/2 if np.isnan(i)==False and np.isnan(j)==False else j if np.isnan(j)==False else i if np.isnan(i)==False else np.nan for i,j in zip(cvol,pvol)]
+        
+        rvol = (cvol+pvol)/2
         svol = utils.apply(pricer.interp,1,st,["Time","Tenor"],[lst,rvol],asarray=True,fill=True)
         
         var = utils.apply(pricer.totatmfvar,1,st,["Time","Tenor"],[st["Tenor"],lst,svol],asarray=True,fill=True)

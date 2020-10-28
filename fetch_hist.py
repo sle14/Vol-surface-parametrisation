@@ -5,13 +5,13 @@ import utils
 
 cout = utils.log(__file__,__name__)
 
-qdate = "26/10/2020"
+# qdate = "26/10/2020"
 
 curr = "USD"
 window = "1 D"
-# qdate = input("Select trade date in dd/mm/yyyy format: ")
+qdate = input("Select trade date in dd/mm/yyyy format: ")
 
-q = "select distinct Symbol from dbo.chains"
+q = "select distinct Symbol from dbo.chains where Symbol != 'OEX'" #sort out index requests for spot
 symbols = query.get("Static",q)
 symbols = symbols["Symbol"].sort_values().to_list()
 

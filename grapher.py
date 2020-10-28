@@ -247,7 +247,7 @@ class ChainStruct:
         st = np.zeros(len(self.vols),dtype=header)
         st = np.repeat(st[:,np.newaxis],2,axis=1)
         st = self.index(st)
-        vols_cols = ["SmtVol","CallMid","CallSpread","PutMid","PutSpread"]
+        vols_cols = ["RawVol","CallMid","CallSpread","PutMid","PutSpread"]
         for x,y in zip(raw_cols[:-2],vols_cols): st[x][:,0] = self.vols[y]
         st["RCHS"][:,0] = st["RCHS"][:,0]/2
         st["RPHS"][:,0] = st["RPHS"][:,0]/2

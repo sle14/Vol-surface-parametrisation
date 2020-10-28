@@ -51,6 +51,9 @@ def surface(symbol,qdate,qtime=None,errors=False,post=True,loc=0,scale=0):
         return df,eps
     
 #----------------------------------------------------------------------------------
+#Add stat params on errors and goodness of fit, NKE dec expiry shows arb on put wing <- need to check this across
+
+
 # symbol = "JPM"
 # qdate = "25/09/2020"
 # qtime = "20:40"
