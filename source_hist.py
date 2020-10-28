@@ -51,7 +51,7 @@ class Wrapper(EWrapper):
                 self.c.right = right                 
             else:
                 self.c.secType = 'IND'
-                self.dic = {1:"TRADES",2:"TRADES"}
+                self.dic = {1:"TRADES"}
              
         self.no_dat = False
         self.window = "1 D" if window == None else window
