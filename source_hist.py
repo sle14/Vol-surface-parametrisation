@@ -36,7 +36,13 @@ class Wrapper(EWrapper):
                 self.c.secType = "STK"
             else:
                 self.c.secType = "IDX"
-                
+             
+        if symbol == "CSCO":
+            if self.c.secType == "STK": 
+                self.c.primaryExchange = "NASDAQ"        
+            else:
+                self.c.primaryExchange = "CBOE"
+            
         self.no_ask = False
         self.no_bid = False
         self.no_dat = False
