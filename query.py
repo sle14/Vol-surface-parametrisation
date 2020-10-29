@@ -191,7 +191,7 @@ def filter_static(df,num):
     K = utils.apply(f,1,st,["Expiry"],["Strike"])
     return K[~np.isnan(K)]
 
-def opt_remainder(front_months,symbol,curr,qdate,num=10):
+def opt_remainder(front_months,symbol,curr,qdate,num=12):
     df = front_static(front_months,symbol,curr,qdate)
     if df.empty:
         print(f"{time.strftime('%H:%M:%S')} > Nothing to return from static, is spot data populated?")
