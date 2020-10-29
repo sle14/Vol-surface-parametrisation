@@ -62,7 +62,12 @@ class Wrapper(EWrapper):
         self.request(orderId)
 
     def historicalData(self,reqId:int,bar:BarData):
-        self.df.loc[len(self.df)] = [bar.date,bar.open,bar.close]
+        if self.c.symbol != "OEX":
+            row = [bar.date,bar.open,bar.close]
+        else:
+            row = [bar.date,bar.close,bar.close]
+
+        self.df.loc[len(self.df)] = row
         self.tmr.reset(90)
 
     def historicalDataEnd(self,reqId:int,start:str,end:str):
