@@ -124,7 +124,7 @@ def front_series(front_months,symbol,curr,qdate,qtime=None,opt_table=None):
     x = x.columns[x.isna().any()].tolist()
     return df[~df["Tenor"].isin(x)] #Exclude tenors which are missing quotes for any particular slice
 
-def front_static(front_months,symbol,curr,qdate,spotpx=0.,lbound_money=0.4,ubound_money=1.4):
+def front_static(front_months,symbol,curr,qdate,spotpx=0.,lbound_money=0.6,ubound_money=1.4):
     if spotpx == 0:
         spot = """(
     	select sum((Bid+Ask)/2)/count(Bid) as Mid from Quotes.dbo.Spot
@@ -177,33 +177,43 @@ def drop_dupes(on:list,database,table_name):
     post(dfc,database,table_name,"replace")
     print(f"Dropped {dropped_rows} dupes from {database}.dbo.{table_name}")
 
-def drop_strikes(arr,num):
+def drop_strikes(arr,exp,num):
     x = arr.copy()
-    while len(x) > num:
-        x[::2] = 0
-        x = x[x!=0]
-    return [i if i in x else np.nan for i in arr]
+    while x.shape[0] > num:
+        x[::2] = np.nan
+        x = x[~np.isnan(x)]
+    return [i if i in x else np.nan for i in arr],exp
 
 def filter_static(df,num):
     df = df.drop(columns=["Type"]).drop_duplicates(["Expiry","Strike"])
     st = utils.pack(df)
-    f = lambda arr: drop_strikes(arr,num)
-    K = utils.apply(f,1,st,["Expiry"],["Strike"])
-    return K[~np.isnan(K)]
+    f = lambda arr,exp: drop_strikes(arr,exp,num)
+    arr = utils.apply(f,2,st,["Expiry"],["Strike","Expiry"],fill=True)
+    return arr
 
 def opt_remainder(front_months,symbol,curr,qdate,num=12):
     df = front_static(front_months,symbol,curr,qdate)
     if df.empty:
         print(f"{time.strftime('%H:%M:%S')} > Nothing to return from static, is spot data populated?")
         return df
-    K = filter_static(df,num) #Drop strikes until halving criteria per expiry is satisfied
-    df = df[df["Strike"].isin(K)].reset_index(drop=True).set_index(["Expiry","Type","Strike"])
+    
+    #Drop strikes until halving criteria per expiry is satisfied
+    df = pd.DataFrame(filter_static(df,12),columns=["Strike","Expiry"]).dropna()
+    df["Expiry"] = utils.to_date(df["Expiry"].to_numpy())
+    df["Type"] = "C"
+    dfx = df.copy()
+    dfx["Type"] = "P"
+    df = pd.concat([df,dfx],axis=0).sort_values(by=["Strike","Expiry","Type"])
+    df = df.set_index(["Expiry","Type","Strike"])
+    del dfx;
+    
     q = f"select distinct Expiry,Type,Strike from dbo.[{symbol}] where Date = convert(datetime,'{qdate}',103)"
     try:
         opt = get("Quotes",q).set_index(["Expiry","Type","Strike"])
         opt["Exists"] = 1.
     except:
         return df.reset_index()
+    
     df = pd.concat([df,opt],axis=1)
     df = df[df["Exists"].isnull()]
     df = df.reset_index().drop(columns=["Exists"])
