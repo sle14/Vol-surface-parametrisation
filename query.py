@@ -191,14 +191,14 @@ def filter_static(df,num):
     arr = utils.apply(f,2,st,["Expiry"],["Strike","Expiry"],fill=True)
     return arr
 
-def opt_remainder(front_months,symbol,curr,qdate,num=12):
+def opt_remainder(front_months,symbol,curr,qdate,num=14):
     df = front_static(front_months,symbol,curr,qdate)
     if df.empty:
         print(f"{time.strftime('%H:%M:%S')} > Nothing to return from static, is spot data populated?")
         return df
     
     #Drop strikes until halving criteria per expiry is satisfied
-    df = pd.DataFrame(filter_static(df,12),columns=["Strike","Expiry"]).dropna()
+    df = pd.DataFrame(filter_static(df,num),columns=["Strike","Expiry"]).dropna()
     df["Expiry"] = utils.to_date(df["Expiry"].to_numpy())
     df["Type"] = "C"
     dfx = df.copy()

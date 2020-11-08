@@ -107,8 +107,8 @@ class Wrapper(EWrapper):
     def end_of_queue(self):
         app.disconnect()
         self.tmr.terminate()
-        df = self.combine_data()
-        if df.empty == False:
+        if self.df.empty == False:
+            df = self.combine_data()
             df = self.check_dates(df)
             if self.c.secType == "STK":
                 df = self.check_spot(df)
@@ -149,8 +149,7 @@ class Wrapper(EWrapper):
         if errorCode == 162:
             if "Bid" in errorString:
                 self.no_bid = True
-                reqId += 1
-                self.request(reqId)            
+                self.end_of_queue()       
             elif "Ask" in errorString:
                 self.no_ask = True
                 self.end_of_queue()  

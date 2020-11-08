@@ -5,7 +5,7 @@ import utils
 
 cout = utils.log(__file__,__name__)
 
-# qdate = "27/10/2020"
+# qdate = "29/10/2020"
 
 curr = "USD"
 window = "1 D"
