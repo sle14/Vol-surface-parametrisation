@@ -23,7 +23,7 @@ symbols = query.get("Static",q)
 symbols = symbols["Symbol"].sort_values().to_list()
 
 try:
-    for symbol in ["OEX"]:
+    for symbol in symbols:
         while True:
             df = query.front_series(3,symbol,curr,qdate)
     
