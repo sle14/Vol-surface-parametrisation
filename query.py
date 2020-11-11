@@ -177,27 +177,28 @@ def drop_dupes(on:list,database,table_name):
     post(dfc,database,table_name,"replace")
     print(f"Dropped {dropped_rows} dupes from {database}.dbo.{table_name}")
 
-def drop_strikes(arr,exp,num):
-    x = arr.copy()
-    while x.shape[0] > num:
-        x[::2] = np.nan
-        x = x[~np.isnan(x)]
+def drop_strikes(arr,num,exp): 
+    median = (min(arr) + max(arr))/2
+    xu = np.geomspace(median,max(arr),int(num/2))
+    xl = min(arr) + median - np.geomspace(min(arr),median,int(num/2))
+    x = np.sort(np.hstack([xl,xu[1:]]))
+    x = [utils.closest(arr,i) for i in x]
     return [i if i in x else np.nan for i in arr],exp
 
 def filter_static(df,num):
     df = df.drop(columns=["Type"]).drop_duplicates(["Expiry","Strike"])
     st = utils.pack(df)
-    f = lambda arr,exp: drop_strikes(arr,exp,num)
+    f = lambda arr,exp: drop_strikes(arr,num,exp)
     arr = utils.apply(f,2,st,["Expiry"],["Strike","Expiry"],fill=True)
     return arr
 
-def opt_remainder(front_months,symbol,curr,qdate,num=14):
+def opt_remainder(front_months,symbol,curr,qdate,num):
     df = front_static(front_months,symbol,curr,qdate)
     if df.empty:
         print(f"{time.strftime('%H:%M:%S')} > Nothing to return from static, is spot data populated?")
         return df
     
-    #Drop strikes until halving criteria per expiry is satisfied
+    #Drop strikes
     df = pd.DataFrame(filter_static(df,num),columns=["Strike","Expiry"]).dropna()
     df["Expiry"] = utils.to_date(df["Expiry"].to_numpy())
     df["Type"] = "C"

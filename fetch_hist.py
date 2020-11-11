@@ -5,7 +5,7 @@ import utils
 
 cout = utils.log(__file__,__name__)
 
-# qdate = "29/10/2020"
+# qdate = "10/11/2020"
 
 curr = "USD"
 window = "1 D"
@@ -29,12 +29,12 @@ try:
         else:
             cout.info(f"{symbol} - stk table already populated") 
         
-        opt = query.opt_remainder(3,symbol,curr,qdate)
+        opt = query.opt_remainder(3,symbol,curr,qdate,14)
         while opt.empty == False:
             cout.info(f"{symbol} - requesting {len(opt.index)} contract quotes")
             for i in opt.index:
                 req.options(opt["Expiry"].iloc[i],opt["Strike"].iloc[i],opt["Type"].iloc[i])
-            opt = query.opt_remainder(3,symbol,curr,qdate)
+            opt = query.opt_remainder(3,symbol,curr,qdate,14)
         else:
             cout.info(f"{symbol} - opt table already populated")
         

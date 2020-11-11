@@ -1,5 +1,7 @@
 from numpy.lib.recfunctions import unstructured_to_structured as struct
 from numpy.lib.recfunctions import structured_to_unstructured as unstruct
+from numpy import log,sqrt,exp,inf,nan,pi
+import matplotlib.pyplot as plt 
 import numpy as np
 import pricer
 import utils
@@ -16,8 +18,8 @@ def surface(symbol,qdate,qtime=None,errors=False,post=True,loc=0,scale=0):
     
     #----------------------------------------------------------------------------------
     f = lambda LST: pricer.norm_weights(LST,loc,scale)
-    wgt = utils.apply(f,1,st,["Time","Tenor"],["LogStrike"])
-    
+    wgt = utils.apply(f,1,st,["Time","Tenor"],["LogStrike"]) #retrive weights vector
+
     sv = pricer.SSVI(errors)
     f = lambda LST,VAR,TNR,VOL: sv.calibrate(LST,VAR,TNR,VOL,wgt)
     
@@ -49,12 +51,3 @@ def surface(symbol,qdate,qtime=None,errors=False,post=True,loc=0,scale=0):
         return df
     else:
         return df,eps
-    
-#----------------------------------------------------------------------------------
-#Add stat params on errors and goodness of fit, NKE dec expiry shows arb on put wing <- need to check this across
-
-
-# symbol = "JPM"
-# qdate = "25/09/2020"
-# qtime = "20:40"
-# x = surface(symbol,qdate,qtime,errors=True,post=False)

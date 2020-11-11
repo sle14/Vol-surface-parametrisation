@@ -199,7 +199,6 @@ def apply(f,returns,st,cat_cols=(),args=(),asarray=False,fill=False,diff=False):
         else:
             deq.append(ret)
   
-    
     if returns == 1:
         ret = np.hstack(list(deq)).T
         
@@ -235,6 +234,9 @@ def to_unix(arr):
 
 def to_date(arr):
     return pd.to_datetime(arr,unit="s")
+
+def closest(lst,x): 
+    return lst[min(range(len(lst)),key=lambda i:abs(lst[i]-x))] 
 
 def intersect2d(X,Y):
     X = np.tile(X[:,:,None], (1, 1, Y.shape[0]) )

@@ -384,7 +384,7 @@ def fit_spread(K,S,spread,R):
     popt,pcov = curve_fit(
                           H,K,spread,
                           p0 = (min(spread),1e-6,S[0]),
-                          bounds = ((0,0,S[0]/1.5),(10,0.5,S[0]*1.5)),
+                          bounds = ((0,0,S[0]/3),(30,1,S[0]*3)),
                          )
     return popt[0],popt[1],popt[2]
 
@@ -392,7 +392,7 @@ def interp(k,s):
     cout.info("Interpolating vols")
     s_exnan = s[~np.isnan(s)]
     k_exnan = k[~np.isnan(s)]
-    weights = n(k_exnan,0,0.45)
+    weights = n(k_exnan,0,0.3)
     if len(k_exnan) >= 6:
         bspl = splrep(k_exnan,s_exnan,w=weights,s=1)
         s_exnan = splev(k_exnan,bspl)
@@ -405,15 +405,7 @@ def interp(k,s):
         return s
 
 def norm_weights(k,loc=0,scale=0):
-    if scale == 0:
-        if len(k) > 15:
-            scale = 0.5
-        elif 16 > len(k) > 9:
-            scale = 0.4
-        elif 10 > len(k) > 6:
-            scale = 0.3
-        else:
-            scale = 0.2
+    if scale == 0: scale = 0.1 #we want to fit on vol ex liquidity premium
     w = n(k,loc,scale)
     return w/max(w)
     
@@ -431,4 +423,6 @@ def totatmfvar(T,k,s):
     cout.info(f"{round(T[0])} ATMF Variance {atm[0]}")
     return atm
 
+def eed(C,P,S,K,r,q,T):
+    return C-P-S*exp(-q*T)+K*exp(-r*T)
 #---------------------------------------------------------------------------------------------

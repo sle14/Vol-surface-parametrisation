@@ -12,8 +12,8 @@ np.seterr(divide='ignore')
 np.warnings.filterwarnings('ignore')
 base = 253
 
-# qdate = "26/10/2020"
-qtime = "19:40"
+# qdate = "10/11/2020"
+qtime = "16:30"
 curr = "USD"
 
 qdate = input("Select trade date in dd/mm/yyyy format: ")
@@ -23,12 +23,12 @@ symbols = query.get("Static",q)
 symbols = symbols["Symbol"].sort_values().to_list()
 
 try:
-    for symbol in symbols:
+    for symbol in ["OEX"]:
         while True:
             df = query.front_series(3,symbol,curr,qdate)
     
             #Check quotes are populated
-            remainder = query.opt_remainder(3,symbol,curr,qdate)
+            remainder = query.opt_remainder(3,symbol,curr,qdate,14)
             if remainder.empty == False: 
                 left = len(remainder)
                 cout.info(f"{symbol} - {left} quotes missing, waiting for fetch to populate") 
@@ -78,13 +78,13 @@ try:
             args = utils.select(st,["PutMid","SpotMid","Strike","Tenor","Rate"])
             pvol,peep = f(*args)
             
-            # cvol = utils.apply(pricer.interp,1,st,["Time","Tenor"],[lst,cvol],asarray=True,fill=True)
-            # pvol = utils.apply(pricer.interp,1,st,["Time","Tenor"],[lst,pvol],asarray=True,fill=True)
+            ceep = utils.apply(pricer.interp,1,st,["Time","Tenor"],[lst,ceep],asarray=True,fill=True)
+            peep = utils.apply(pricer.interp,1,st,["Time","Tenor"],[lst,peep],asarray=True,fill=True)
             
             rvol = [(i+j)/2 if np.isnan(i)==False and np.isnan(j)==False else j if np.isnan(j)==False else i if np.isnan(i)==False else np.nan for i,j in zip(cvol,pvol)]
             svol = utils.apply(pricer.interp,1,st,["Time","Tenor"],[lst,rvol],asarray=True,fill=True)
             
-            var = utils.apply(pricer.totatmfvar,1,st,["Time","Tenor"],[st["Tenor"],lst,svol],asarray=True,fill=True)
+            var = utils.apply(pricer.totatmfvar,1,st,["Time","Tenor"],[st["Tenor"],lst,rvol],asarray=True,fill=True)
             
             ar = np.column_stack([unstruct(st),yld,chs,phs,fwd,lst,cvol,ceep,pvol,peep,rvol,svol,var])
             df = utils.unpack(ar)
