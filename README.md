@@ -14,20 +14,20 @@ Ngrok link to the dashboard: https://vol.ngrok.io/
 
 ## About
 
-My initial goal was to find robust way of generating arb-free vol surface on single stock option quotes, so that I would be able to determine change in portfolio liquidation value for change in moments of vol, spreads, cost of carry, price of underlying and time. I have decided to use Gatheral's Surface Stohastic Volatility Inspired (SSVI) method for this, but had few issues with poor fit, which was expected as I was using vols from american quotes which explode in wings, particularly before the ex-date. So instead of direct minimisation on raw vols I had to first de-americanise them, by deducting the premium they command with respect to european quotes.
+My initial goal was to find a robust way of generating arbitrage-free volatility surface on single stock options quotes so that I would be able to determine the change in portfolio liquidation value for change in moments of volatility, spreads, cost of carry, price of underlying, and time. I have decided to use Gatheral's Surface Stochastic Volatility Inspired (SSVI) method for this but had few issues with poor fit. This was expected as I was using volatility derived from american option quotes which volatility explode in wings due to early exercise premium inflating relative value. So instead of direct minimisation on raw volatilities, I had to first de-americanise them by deducting the premium they command with respect to european quotes.
 
-For this I went along with Kim integral approximation method instead of trees, as it has a very useful feature of decomposition of american options value into european base and early exercise values. However, as this method involves numerical solution of quadrature formulas on each step exercise boundary, even with numpy vectorisation and broadcasting it was still a bit too slow. So I wrote the base class in C++ and used ctypes lib to call its functions from Python. Having derived de-americanised vols, I was able to fit SSVI on them directly.
+For this, I went along with Kim integral approximation method instead of trees, as it has a very useful feature of decomposition of american options value into european base and early exercise values. However, as this method involves a numerical solution of quadrature formulas on each step exercise boundary, even with Numpy vectorisation and broadcasting it was still quite slow. So I wrote the quadrature pricer class in C++ and used Ctypes library to call its functions from Python. Having derived de-americanised volatilities, I was able to minimise on quotes directly, which has significantly reduced errors in fit.
 
-Calibration to the market is done using SLSQP algorithm with constrains and bounds to prevent arbitrage in the surface. Risk neutral density is derived using fitted SSVI parameters with explicit differentiation of BSM formula and primes of surface function. I have changed Jump-wing parameters from 5 to 3 where we now have ATMF Vol, 1st and 2nd derivatives of ATMF variance (skew & kurtosis), when we shock these parameters we can invert them back to raw parameters to get the new vol surface.
+Calibration to the market is done using SLSQP algorithm with constraints and bounds to prevent arbitrage on the surface. Risk neutral density is derived using fitted SSVI parameters with explicit differentiation of BSM formula and primes of surface function. I have changed Jump-wing parameters from 5 to 3 where we now have ATMF volatility, skew, and kurtosis which we can shock and invert back to raw parameters to get the new volatility surface.
 
-All the above is packed into numpy structs to allow for better handling of multi-dimensionality and memory optimisation, ie in case of plotting payoffs and liquidation values wrt dSpot and dTime. I have used plotly and ipwidgets for interface, and voila for the server. 
+All the above is packed into Numpy structs to allow for better handling of multi-dimensionality and memory optimisation, for example in the case of plotting payoffs and liquidation values with respect to change in underlying and time. I have used Plotly and Ipwidgets packages for the interface, and have deployed a notebook using Voila that I have tunneled to public access using Ngrok.
 
 ## Features
 
-- Breakdown of positions liquidation value by Greeks, Spread and EEP for given changes in 11 factors by expiry group.
-- Plotting of payoffs and values for dS and dT ranges that use the factor changes as specified by user and consider Spread and EEP.
-- Density and total variance plots for referring to absence of arbitrage within the newly generated surface specified by user.
-- Daily data with 10 minute interval for 40 listed US single stock option names, with 3 front month expiries per each where available.
+- Breakdown of positions liquidation value by Greeks, Spread, and EEP for given changes in 11 factors by expiry group.
+- Plotting of payoffs and values for dS and dT ranges that use the factor changes as specified by the user and consider Spread and EEP.
+- Density and total variance plots for referring to the absence of arbitrage within the newly generated surface specified by the user.
+- Daily data with the 10-minute interval for 40 listed US single stock option names, with 3 front-month expiries per each where available.
 - Ability to specify weights for the SSVI fit residual based on gaussian density location and scale parameters.
 
 ## Guide
