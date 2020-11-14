@@ -22,7 +22,7 @@ class Wrapper(EWrapper):
         self.c.symbol = symbol
         self.c.currency = currency
             
-        if symbol != "OEX":
+        if symbol != "OEX": #If non index
             self.c.exchange = "SMART"
             if expiry != None: 
                 self.c.secType = "OPT"
@@ -51,7 +51,7 @@ class Wrapper(EWrapper):
                 self.c.right = right                 
             else:
                 self.c.secType = 'IND'
-                self.dic = {1:"BID_ASK"}
+                self.dic = {1:"TRADES"}
              
         self.no_dat = False
         self.window = "1 D" if window == None else window
@@ -62,11 +62,10 @@ class Wrapper(EWrapper):
         self.request(orderId)
 
     def historicalData(self,reqId:int,bar:BarData):
-        if self.c.symbol != "OEX":
+        if self.c.secType != 'IND':
             row = [bar.date,bar.open,bar.close]
         else:
             row = [bar.date,bar.close,bar.close]
-
         self.df.loc[len(self.df)] = row
         self.tmr.reset(90)
 

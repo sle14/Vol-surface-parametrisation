@@ -114,6 +114,7 @@ def vols(cols,order_by,symbol,qdate=None,qtime=None,distinct=False):
 
 def front_series(front_months,symbol,curr,qdate,qtime=None,opt_table=None):
     q = opt_stack(front_months,symbol,curr,qdate,qtime,opt_table)
+
     df = get("Quotes",q)
     if df.empty: print("Nothing returned on quotes, are rates populated?")
     df["CumDivDays"] = np.where(df["Tenor"]<df["CumDivDays"],0,df["CumDivDays"])
