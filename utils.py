@@ -113,9 +113,11 @@ cols_dct = {
            }
 
 prm_cols = [
-            "BBG", #Ticker
-            "DAT", #Date
-            "TIM", #Time
+            "Symbol",
+            "Date",
+            "Time",
+            
+            "IDX", #Group
             "TNR", #Tenor
             "SPT", #Spot px
             "FWD", #Forward
@@ -155,9 +157,9 @@ def unpack(arr,date=None,raw=True,symbol=None):
         return df
     else:
         df = pd.DataFrame(arr,columns=prm_cols[2:])
-        df["DAT"] = pd.to_datetime(date,format="%d/%m/%Y")
-        df["BBG"] = symbol
-        return df.reindex(columns=["BBG","DAT"]+df.columns[:-2].tolist())        
+        df["Date"] = pd.to_datetime(date,format="%d/%m/%Y")
+        df["Symbol"] = symbol
+        return df.reindex(columns=["Symbol","Date"]+df.columns[:-2].tolist())        
 
 #------------------------------------------------------------------------------------
 def apply(f,returns,st,cat_cols=(),args=(),asarray=False,fill=False,diff=False):
@@ -237,6 +239,11 @@ def to_date(arr):
 
 def closest(lst,x): 
     return lst[min(range(len(lst)),key=lambda i:abs(lst[i]-x))] 
+
+def drange(start_date,end_date):    
+    start_date = pd.to_datetime(start_date,format="%d/%m/%Y")
+    end_date = pd.to_datetime(end_date,format="%d/%m/%Y")
+    return list(pd.bdate_range(start_date,end_date).date)
 
 def intersect2d(X,Y):
     X = np.tile(X[:,:,None], (1, 1, Y.shape[0]) )

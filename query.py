@@ -95,8 +95,15 @@ def vols(cols,order_by,symbol,qdate=None,qtime=None,distinct=False):
     if qtime is not None: assert type(qtime) is str, "qtime has to be string in hh:mm format" 
         
     q = "select"
-    if distinct == True: q += " distinct"
-    q += f" {','.join(str(i) for i in cols)} from dbo.[{symbol}]"
+    if distinct == True: 
+        q += " distinct"
+    
+    if "*" not in cols: 
+        q += f" {','.join('['+str(i)+']' for i in cols)}"
+    else:
+        q += " *"
+        
+    q += f" from dbo.[{symbol}]"
     
     if qdate is not None or qtime is not None: 
         q += " where "
@@ -114,7 +121,6 @@ def vols(cols,order_by,symbol,qdate=None,qtime=None,distinct=False):
 
 def front_series(front_months,symbol,curr,qdate,qtime=None,opt_table=None):
     q = opt_stack(front_months,symbol,curr,qdate,qtime,opt_table)
-
     df = get("Quotes",q)
     if df.empty: print("Nothing returned on quotes, are rates populated?")
     df["CumDivDays"] = np.where(df["Tenor"]<df["CumDivDays"],0,df["CumDivDays"])
@@ -151,6 +157,11 @@ def front_static(front_months,symbol,curr,qdate,spotpx=0.,lbound_money=0.6,uboun
     order by Expiry,Strike,Type"""
     return get("Static",query)
 
+def trading_times(qdate,symbol="AAPL"):
+    if type(qdate) != str: qdate = qdate.strftime('%d/%m/%Y')
+    tms = get("Vols",f"select distinct Time from dbo.[{symbol}] where Date = convert(datetime,'{qdate}',103)")["Time"].tolist()
+    return [str(x)[:2]+":"+str(x)[2:] for x in list(sorted(tms))]
+    
 def execute(database,query):
     database=database
     eng = f"mssql+pyodbc://{user}@{server}/{database}?driver={driver}"

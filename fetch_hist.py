@@ -2,9 +2,10 @@ from datetime import datetime
 import source_hist
 import query
 import utils
+import time
 
 cout = utils.log(__file__,__name__)
-
+#---------------------------------------------------------------------------------------------------------
 # qdate = "10/11/2020"
 
 curr = "USD"
@@ -12,12 +13,11 @@ window = "1 D"
 qdate = input("Select trade date in dd/mm/yyyy format: ")
 
 q = "select distinct Symbol from dbo.chains" #sort out index requests for spot
-symbols = query.get("Static",q)
-symbols = symbols["Symbol"].sort_values().to_list()
+symbols = query.get("Static",q)["Symbol"].sort_values().to_list()
 
 try:
     for symbol in symbols:
-        start = datetime.now()
+        start_time = datetime.now()
         
         req = source_hist.QuotesReq(qdate,symbol,curr,window)
         
@@ -38,14 +38,15 @@ try:
         else:
             cout.info(f"{symbol} - opt table already populated")
         
-        cout.info(f"{symbol} - EXEC: {datetime.now()-start}s")
+        elapsed = round((time.time()-start_time)/60,3)
+        cout.info(f"{symbol} - elapsed {elapsed} mins")
         
     cout.terminate()
 except:
     cout.error("Error")
-    
-# query.drop_dupes(["Date","Time","Symbol","Expiry","Strike","Type","Lotsize","Currency"],"Quotes","OEX")
+#---------------------------------------------------------------------------------------------------------
 
+# query.drop_dupes(["Date","Time","Symbol","Expiry","Strike","Type","Lotsize","Currency"],"Quotes","OEX")
 # req = source_hist.QuotesReq(qdate,"WMT",curr,window)
 # req.equities()
 

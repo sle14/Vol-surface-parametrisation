@@ -11,7 +11,7 @@ cout = utils.log(__file__,__name__)
 np.seterr(divide='ignore')
 np.warnings.filterwarnings('ignore')
 base = 253
-
+#---------------------------------------------------------------------------------------------------------
 # qdate = "10/11/2020"
 qtime = "16:30"
 curr = "USD"
@@ -19,8 +19,7 @@ curr = "USD"
 qdate = input("Select trade date in dd/mm/yyyy format: ")
 
 q = "select distinct Symbol from dbo.chains"
-symbols = query.get("Static",q)
-symbols = symbols["Symbol"].sort_values().to_list()
+symbols = query.get("Static",q)["Symbol"].sort_values().to_list()
 
 try:
     for symbol in symbols:
@@ -94,6 +93,8 @@ try:
             elapsed = round((time.time()-start_time)/60,3)
             cout.info(f"{symbol} - elapsed {elapsed} mins")
             break
+        
     cout.terminate()
 except:
-    cout.error("Error")    
+    cout.error("Error")  
+#---------------------------------------------------------------------------------------------------------

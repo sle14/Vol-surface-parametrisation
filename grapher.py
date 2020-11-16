@@ -68,6 +68,7 @@ class theme:
 c = theme()
 #------------------------------------------------------------------------------
 vol_cols = [
+            "Group",
             "Tenor",
             "Strike",
             "LogStrike",
@@ -182,10 +183,6 @@ greeks_rights = ["C","P","x","x","C","P","C","P","x","x","x","C","P"]
 def symbol_universe():
     return query.get("Static","select distinct Symbol from dbo.chains where Symbol != 'FP' order by Symbol")["Symbol"].tolist()
 
-def trading_times(symbol):
-    tms = query.get("Vols",f"select distinct Time from dbo.{symbol} where Date = convert(datetime,'26/10/2020',103)")["Time"].tolist()
-    return [str(x)[:2]+":"+str(x)[2:]+" UTC" for x in list(sorted(tms))]
-
 class Progress(tl.HasTraits):
     val = tl.Float
 
@@ -247,23 +244,17 @@ class ChainStruct:
                   [(x,np.float64) for x in out_cols]+[(x,np.float64) for x in raw_cols])
         st = np.zeros(len(self.vols),dtype=header)
         st = np.repeat(st[:,np.newaxis],2,axis=1)
-        st = self.index(st)
+        
+        st["STR"][:,0] = self.vols["Strike"]
+        st["STR"][:,1] = self.vols["Strike"]
+        st["IDX"][:,0] = self.vols["Group"]
+        st["IDX"][:,1] = self.vols["Group"]
+        
         vols_cols = ["RawVol","CallMid","CallSpread","PutMid","PutSpread"]
         for x,y in zip(raw_cols[:-2],vols_cols): st[x][:,0] = self.vols[y]
         st["RCHS"][:,0] = st["RCHS"][:,0]/2
         st["RPHS"][:,0] = st["RPHS"][:,0]/2
-        return st
-
-    def index(self,st):                                                         #Transform tenor value to expiry group num
-        idx = np.array(list(sorted(self.params["TNR"])))
-        idx = np.repeat(idx[:,np.newaxis],2,axis=1)
-        idx[:,1] = range(idx.shape[0])
-        dct = dict(zip(idx[:,0],idx[:,1]))
-        idx = [dct[x] for x in self.vols.index]
-        st["STR"][:,0] = self.vols["Strike"]
-        st["STR"][:,1] = self.vols["Strike"]
-        st["IDX"][:,0] = idx
-        st["IDX"][:,1] = idx
+        
         return st
 
     def search_raw(self,I,K,cols,leg=0):                                        #Arrays have to be sorted for this!
@@ -813,7 +804,7 @@ class LoadData:
     def start(self,loc=0,scale=0): #Return here instead of post& get -> not efficient
         prg_load.val += 0.1
         
-        params,errors = calibrator.surface(self.symbol,self.qdate,self.qtime,errors=True,post=False,loc=loc,scale=scale)
+        params,errors = calibrator.surface(self.symbol,self.qdate,self.qtime,errors=True,loc=loc,scale=scale)
         self.errors = errors
         prg_load.val += 0.1
         

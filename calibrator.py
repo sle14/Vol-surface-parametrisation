@@ -1,7 +1,5 @@
 from numpy.lib.recfunctions import unstructured_to_structured as struct
 from numpy.lib.recfunctions import structured_to_unstructured as unstruct
-from numpy import log,sqrt,exp,inf,nan,pi
-import matplotlib.pyplot as plt 
 import numpy as np
 import pricer
 import utils
@@ -11,7 +9,7 @@ np.seterr(divide='ignore')
 np.warnings.filterwarnings('ignore')
 base = 253
 
-def surface(symbol,qdate,qtime=None,errors=False,post=True,loc=0,scale=0):
+def surface(symbol,qdate,qtime=None,errors=False,n=False,loc=0,scale=0):
     df = query.vols(["*"],["Date","Time","Tenor","Strike"],symbol,qdate,qtime)
     st = utils.pack(df)
     del df;
@@ -31,7 +29,7 @@ def surface(symbol,qdate,qtime=None,errors=False,post=True,loc=0,scale=0):
         prm = utils.apply(f,5,st,["Time"],["LogStrike","TotAtmfVar","Tenor","SmtVol"],fill=False)
 
     #----------------------------------------------------------------------------------
-    reduced = ["Time","Tenor","SpotMid","Forward","CumDivDays","Div","ImpBor",
+    reduced = ["Time","Group","Tenor","SpotMid","Forward","CumDivDays","Div","ImpBor",
                "Rate","CallH0","CallH1","CallKh","PutH0","PutH1","PutKh","TotAtmfVar"]
     st = utils.unique_nosort(st[reduced])
     
@@ -43,11 +41,13 @@ def surface(symbol,qdate,qtime=None,errors=False,post=True,loc=0,scale=0):
     
     arr = unstruct(st)
     arr = np.column_stack([arr,atm,skw,krt,phi,rho])
-    df = utils.unpack(arr,qdate,False,symbol)
+    df = utils.unpack(arr,qdate,raw=False,symbol=symbol)
     
-    if post == True: query.post(df,"Params","main","replace")
-    
-    if errors == False:
-        return df
-    else:
+    if errors == True and n == False:
         return df,eps
+    elif errors == False and n == True:
+        return df,n
+    elif errors == True and n == True:
+        return df,eps,n
+    else:
+        return df
