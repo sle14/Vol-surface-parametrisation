@@ -371,7 +371,7 @@ class ChainStruct:
         st = np.asarray(np.split(st,2)).T                                       #We need only open data
         
         dS = self.get_raw(0,"SPT",1)[0] - self.get_raw(0,"SPT",0)[0]
-        dT = st["TNR"][:,1] - st["TNR"][:,0]
+        dT = st["TNR"][:,0] - st["TNR"][:,1]
         ds = st["VOL"][:,1] - st["VOL"][:,0]
 
         pnl_SIZ = sum(st["SIZ"][:,1] + st["SIZ"][:,0])
@@ -516,6 +516,7 @@ class ChainStruct:
 
         params = sv.jw2raw(T,rs["ATM"][:,leg],rs["SKW"][:,leg],rs["KRT"][:,leg])
         params = np.nan_to_num(params)
+        
         rs["PHI"][:,leg] = params[1]
         rs["RHO"][:,leg] = params[2]
         rs["VAR"][:,leg] = sv.raw(k,*params)

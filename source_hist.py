@@ -21,9 +21,10 @@ class Wrapper(EWrapper):
         self.c = Contract()
         self.c.symbol = symbol
         self.c.currency = currency
+        self.c.exchange = "SMART"
+        
+        if symbol != "NDX": #If non index
             
-        if symbol != "OEX": #If non index
-            self.c.exchange = "SMART"
             if expiry != None: 
                 self.c.secType = "OPT"
                 if type(expiry) == str: expiry = pd.to_datetime(expiry,format="%d/%m/%Y")
@@ -41,8 +42,8 @@ class Wrapper(EWrapper):
                     self.c.primaryExchange = "CBOE"
                     
         else:
-            self.c.exchange = 'CBOE'
             if expiry != None:
+                self.c.primaryExchange = "CBOE"
                 self.c.secType = "OPT"
                 if type(expiry) == str: expiry = pd.to_datetime(expiry,format="%d/%m/%Y")
                 self.c.lastTradeDateOrContractMonth = expiry.strftime("%Y%m%d")
@@ -50,6 +51,7 @@ class Wrapper(EWrapper):
                 self.c.multiplier = 100.
                 self.c.right = right                 
             else:
+                self.c.primaryExchange = "NASDAQ"
                 self.c.secType = 'IND'
                 self.dic = {1:"TRADES"}
              

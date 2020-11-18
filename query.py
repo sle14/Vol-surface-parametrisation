@@ -13,7 +13,7 @@ server = "DESKTOP-1HLMBUK"
 driver = "SQL Server Native Client 11.0"
 user = "Aigars"
 
-def opt_stack(front_months,symbol,curr,qdate,qtime=None,opt_table=None):
+def opt_stack(front_months,weekday,symbol,curr,qdate,qtime=None,opt_table=None):
     opt_table = symbol if opt_table == None else opt_table
     query = f"""
     declare @symbol varchar(60); set @symbol = '{symbol}';
@@ -22,8 +22,8 @@ def opt_stack(front_months,symbol,curr,qdate,qtime=None,opt_table=None):
 	declare @maxqdate datetime; set @maxqdate = (select max(Expiry) as Expiry from (
 		select distinct top {front_months} Expiry from Static.dbo.chains 
 		where Expiry > @qdate and Symbol = @symbol and Lotsize = 100 and Currency = @curr
-		and (datepart(weekday, Expiry) + @@DATEFIRST - 2) % 7 + 1 = 5   -- 5 -> Friday
-		and (datepart(day, Expiry) - 1) / 7 + 1 = 3                     -- 3 -> 3rd week
+		and (datepart(weekday, Expiry) + @@DATEFIRST - 2) % 7 + 1 = {weekday}   -- 5 -> Friday
+		and (datepart(day, Expiry) - 1) / 7 + 1 = 3                             -- 3 -> 3rd week
 		order by Expiry) as sq);
     with 
     type_stack as (
@@ -116,13 +116,45 @@ def vols(cols,order_by,symbol,qdate=None,qtime=None,distinct=False):
     q += f" order by {','.join(str(i) for i in order_by)}"
     
     df = get("Vols",q)
-    if df.empty: print(f"Returned empty df on vol query with args: {cols}, {symbol}, {qdate}, {qtime}")
+    # if df.empty: print(f"Returned empty df on vol query with args: {cols}, {symbol}, {qdate}, {qtime}")
     return df
 
-def front_series(front_months,symbol,curr,qdate,qtime=None,opt_table=None):
-    q = opt_stack(front_months,symbol,curr,qdate,qtime,opt_table)
+def params(cols,order_by,symbol=None,qdate=None,qtime=None,distinct=False):
+    assert type(cols) is list, "cols requested must be in list format"
+    assert type(order_by) is list, "order_by requested must be in list format"
+    if qdate is not None: assert type(qdate) is str, "qdate has to be string in dd/mm/yyyy format" 
+    if qtime is not None: assert type(qtime) is str, "qtime has to be string in hh:mm format" 
+        
+    q = "select"
+    if distinct == True: 
+        q += " distinct"
+    
+    if "*" not in cols: 
+        q += f" {','.join('['+str(i)+']' for i in cols)}"
+    else:
+        q += " *"
+        
+    q += " from dbo.main"
+    
+    if qdate is not None or qtime is not None: 
+        q += " where"
+    if symbol is not None:
+        q += f" Symbol = '{symbol}' and"
+    if qdate is not None and qtime is not None: 
+        q += f" Date = convert(datetime,'{qdate}',103) and Time = {int(qtime.replace(':',''))}"
+    elif qdate is not None:
+        q += f" Date = convert(datetime,'{qdate}',103)"
+    elif qtime is not None:
+        q += f" Time = {int(qtime.replace(':',''))}"
+    q += f" order by {','.join(str(i) for i in order_by)}"
+    
+    df = get("Params",q)
+    # if df.empty: print(f"Returned empty df on vol query with args: {cols}, {symbol}, {qdate}, {qtime}")
+    return df
+
+def front_series(front_months,weekday,symbol,curr,qdate,qtime=None,opt_table=None):
+    q = opt_stack(front_months,weekday,symbol,curr,qdate,qtime,opt_table)
     df = get("Quotes",q)
-    if df.empty: print("Nothing returned on quotes, are rates populated?")
     df["CumDivDays"] = np.where(df["Tenor"]<df["CumDivDays"],0,df["CumDivDays"])
     df["Div"] = np.where(df["CumDivDays"]==0,0,df["Div"])
     df = df.groupby(["Time","Tenor"]).filter(lambda x:len(x) > 2) #Drop if less than 3 occurences 
@@ -131,7 +163,7 @@ def front_series(front_months,symbol,curr,qdate,qtime=None,opt_table=None):
     x = x.columns[x.isna().any()].tolist()
     return df[~df["Tenor"].isin(x)] #Exclude tenors which are missing quotes for any particular slice
 
-def front_static(front_months,symbol,curr,qdate,spotpx=0.,lbound_money=0.6,ubound_money=1.4):
+def front_static(front_months,weekday,symbol,curr,qdate,spotpx=0.,lbound_money=0.6,ubound_money=1.4):
     if spotpx == 0:
         spot = """(
     	select sum((Bid+Ask)/2)/count(Bid) as Mid from Quotes.dbo.Spot
@@ -149,8 +181,8 @@ def front_static(front_months,symbol,curr,qdate,spotpx=0.,lbound_money=0.6,uboun
     	from Static.dbo.chains 
     	where Expiry in (
     		select distinct top {front_months} Expiry from Static.dbo.chains where Expiry > @qdate
-    		and (datepart(weekday, Expiry) + @@DATEFIRST - 2) % 7 + 1 = 5   -- 5 -> Friday
-    		and (datepart(day, Expiry) - 1) / 7 + 1 = 3                     -- 3 -> 3rd week
+    		and (datepart(weekday, Expiry) + @@DATEFIRST - 2) % 7 + 1 = {weekday}   -- 5 -> Friday
+    		and (datepart(day, Expiry) - 1) / 7 + 1 = 3                             -- 3 -> 3rd week
     		order by Expiry)
     	and Symbol = @symbol and Lotsize = 100 and Currency = @curr) as sq
     where Strike/@spot < {ubound_money} and Strike/@spot > {lbound_money}
@@ -204,8 +236,8 @@ def filter_static(df,num):
     arr = utils.apply(f,2,st,["Expiry"],["Strike","Expiry"],fill=True)
     return arr
 
-def opt_remainder(front_months,symbol,curr,qdate,num):
-    df = front_static(front_months,symbol,curr,qdate)
+def opt_remainder(front_months,weekday,symbol,curr,qdate,num):
+    df = front_static(front_months,weekday,symbol,curr,qdate)
     if df.empty:
         print(f"{time.strftime('%H:%M:%S')} > Nothing to return from static, is spot data populated?")
         return df

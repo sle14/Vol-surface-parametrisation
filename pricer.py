@@ -383,7 +383,7 @@ def fit_spread(K,S,spread,R):
         K = K[idx]
     popt,pcov = curve_fit(
                           H,K,spread,
-                          p0 = (min(spread),1e-6,S[0]),
+                          p0 = (min(spread),1e-12,S[0]),
                           bounds = ((0,0,S[0]/3),(30,1,S[0]*3)),
                          )
     return popt[0],popt[1],popt[2]
