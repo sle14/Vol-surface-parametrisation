@@ -41,13 +41,12 @@ def main(qdate,symbols):
 #---------------------------------------------------------------------------------------------------------        
 symbols = query.get("Static","select distinct Symbol from dbo.chains")["Symbol"].sort_values().to_list()
 
-qdate = "16/11/2020"
+# qdate = "16/11/2020"
 
-# qdate = input("Select trade date in dd/mm/yyyy format: ")
+qdate = input("Select trade date in dd/mm/yyyy format: ")
 
 try:
-    for q in ["16/11/2020","17/11/2020"]:
-        main(q,symbols)
+    main(qdate,symbols)
     cout.terminate()
 except:
     cout.error("Error")

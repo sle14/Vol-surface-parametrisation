@@ -32,7 +32,7 @@ def opt_stack(front_months,weekday,symbol,curr,qdate,qtime=None,opt_table=None):
         sum([CAsk]) as 'CallAsk',sum([PAsk]) as 'PutAsk'
         from (select Symbol,[Date],[Time],Expiry,Strike,[Type],Bid,Ask,
 			[Type]+'Bid' as TypeBid,[Type]+'Ask' as TypeAsk
-        	from dbo.[{symbol}] where [Date] = @qdate and Expiry <= @maxqdate 
+        	from Quotes.dbo.[{symbol}] where [Date] = @qdate and Expiry <= @maxqdate 
         	and Bid > 0 and Ask > 0 and Lotsize = 100) as sq
         pivot (sum(Bid) for TypeBid in ([CBid],[PBid])) as pvt_bid
         pivot (sum(Ask) for TypeAsk in ([CAsk],[PAsk])) as pvt_ask
@@ -43,7 +43,7 @@ def opt_stack(front_months,weekday,symbol,curr,qdate,qtime=None,opt_table=None):
     rates_grid as (
         select [Date],Rate from (select * from Static.dbo.rates where Tenor = '3M' and Currency = @curr) as sq),
     spot_grid as (
-		select Symbol,[Date],[Time],Bid,Ask from dbo.Spot),
+		select Symbol,[Date],[Time],Bid,Ask from Quotes.dbo.Spot),
     divs_grid as (
         select top 1 exDate as exDate,Symbol,Amount from (select * from Static.dbo.divs 
 		where exDate > @qdate and Symbol = @symbol) as sd)
@@ -81,7 +81,7 @@ def opt_stack(front_months,weekday,symbol,curr,qdate,qtime=None,opt_table=None):
 	opt_grid.Time = spot_grid.Time and opt_grid.Symbol = spot_grid.Symbol 
     join rates_grid on opt_grid.Date = rates_grid.Date
     left join divs_grid on opt_grid.Symbol = divs_grid.Symbol
-    where opt_grid.PutAsk-opt_grid.PutBid > 0 and opt_grid.CallAsk-opt_grid.CallBid > 0"""
+    where opt_grid.PutAsk-opt_grid.PutBid >= 0 and opt_grid.CallAsk-opt_grid.CallBid >= 0"""
     if qtime != None: 
         qtime = int(qtime.replace(":",""))
         query += f" and opt_grid.[Time] = {qtime}"    

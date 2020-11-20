@@ -54,7 +54,7 @@ def main(qdate,symbols,qtime=None):
         st = utils.pack(quotes)
         
         f = pricer.impdivsborrows
-        yld = utils.apply(f,2,st,["Time","Tenor"],["Moneyness","SpotMid","Strike","Tenor","CallMid","PutMid","Rate","Div","CumDivDays"],fill=True)
+        yld = utils.apply(f,2,st,["Time","Tenor"],["Moneyness","SpotMid","Strike","Tenor","CallBid","PutAsk","Rate","Div","CumDivDays"],fill=True)
         
         f = lambda STR,SPT,SPR: pricer.fit_spread(STR,SPT,SPR,"C")
         chs = utils.apply(f,3,st,["Time","Tenor"],["Strike","SpotMid","CallSpread"],fill=True)
@@ -96,10 +96,10 @@ def main(qdate,symbols,qtime=None):
 #---------------------------------------------------------------------------------------------------------
 symbols = query.get("Static","select distinct Symbol from dbo.chains")["Symbol"].sort_values().to_list()
 
-qdate = "16/11/2020"
+# qdate = "16/11/2020"
 qtime = "15:50"
 
-# qdate = input("Select trade date in dd/mm/yyyy format: ")
+qdate = input("Select trade date in dd/mm/yyyy format: ")
 
 try:
     main(qdate,symbols)        

@@ -69,11 +69,11 @@ def main(qdate,symbols):
 symbols = query.get("Static","select distinct Symbol from dbo.chains")["Symbol"].sort_values().to_list()
 replace = False
 
-# qdates = ["09/11/2020"]
+qdates = ["16/11/2020"]
 
-start_date = input("Select start trade date in dd/mm/yyyy format: ")
-end_date = input("Select end trade date in dd/mm/yyyy format: ")
-qdates = [x.strftime('%d/%m/%Y') for x in utils.drange(start_date,end_date)]
+# start_date = input("Select start trade date in dd/mm/yyyy format: ")
+# end_date = input("Select end trade date in dd/mm/yyyy format: ")
+# qdates = [x.strftime('%d/%m/%Y') for x in utils.drange(start_date,end_date)]
 
 try:
     for qdate in qdates: main(qdate,symbols)
