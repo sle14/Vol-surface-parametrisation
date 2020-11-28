@@ -97,12 +97,16 @@ def main(qdate,symbols,qtime=None):
 symbols = query.get("Static","select distinct Symbol from dbo.chains")["Symbol"].sort_values().to_list()
 
 # qdate = "16/11/2020"
-qtime = "15:50"
+# qtime = "15:50"
+
+# start_date = "11/11/2020"
+# end_date = "19/11/2020"
+# qdates = [x.strftime('%d/%m/%Y') for x in utils.drange(start_date,end_date)]
 
 qdate = input("Select trade date in dd/mm/yyyy format: ")
 
 try:
-    main(qdate,symbols)        
+    main(qdate,symbols)       
     cout.terminate()
 except:
     cout.error("Error")  

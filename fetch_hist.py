@@ -46,8 +46,7 @@ symbols = query.get("Static","select distinct Symbol from dbo.chains")["Symbol"]
 qdate = input("Select trade date in dd/mm/yyyy format: ")
 
 try:
-    main(qdate,symbols)
+    main(qdate,["ADBE"])
     cout.terminate()
 except:
     cout.error("Error")
-
